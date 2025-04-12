@@ -8,7 +8,7 @@ type ModeProps = {
 const Mode = ({icon, on_click}: ModeProps) => {
     return (
 	<div
-	    className="w-[3rem] h-[3rem]  rounded-xl  bg-[var(--color-bg-mode)]  grid place-items-center  text-[var(--color-icon-mode)]"
+	    className="w-[3rem] h-[3rem]  rounded-xl  bg-[var(--color-bg-mode)]  grid place-items-center  text-[var(--color-icon-mode)]  cursor-pointer"
 	    onClick={on_click}
 	>
 	    {icon}	
