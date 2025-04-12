@@ -9,6 +9,9 @@
     }
 
     [data-theme='light'] {
-	--color-bg-pannel: hsl(0, 0%, 95%)
+	--color-bg-pannel: hsl(0, 0%, 95%);
+	--color-bg-mode: hsl(0, 0%, 90%);
+
+	--color-icon-mode: hsl(0, 0%, 35%);
     }
 }

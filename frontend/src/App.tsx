@@ -1,6 +1,14 @@
+import { useTheme } from './components/Theme.tsx'
+
+import Pannel from './components/Pannel'
+
 const App = () => {
+    const [theme, setTheme] = useTheme()
+
     return (
-	<h1>tailwind text</h1>
+	<main className='w-screen h-screen  flex justify-center items-center'>
+	    <Pannel/>
+	</main>
     )
 }
 
