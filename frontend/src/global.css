@@ -27,15 +27,15 @@
     [data-theme='light'] {
 	--color-bg-pannel: hsl(0, 0%, 95%);
 	--color-bg-mode: hsl(0, 0%, 90%);
-	--color-bg-alert: hsl(0, 13%, 46%);
+	--color-bg-alert: hsl(0, 0%, 93%);
 
 	--color-border-alert-act: hsl(0, 13%, 38%);
 
 	--color-icon-mode: hsl(0, 0%, 35%);
-	--color-icon-alert: hsl(240, 100%, 90%);
+	--color-icon-alert: hsl(0, 0%, 20%);
 
-	--color-text-alert-msg: hsl(0, 100%, 100%);
-	--color-text-alert-act: hsl(0, 100%, 90%);
+	--color-text-alert-msg: hsl(0, 0%, 5%);
+	--color-text-alert-act: hsl(0, 0%, 5%);
     }
 }
 
