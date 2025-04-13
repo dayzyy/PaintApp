@@ -35,7 +35,7 @@ const Alert = ({icon, text, info, toggle_off, disable}: AlertProps) => {
 
     return (
 	<div 
-	    className={`fixed top-5  w-[80%]  bg-[var(--color-bg-alert)]  rounded-md  flex flex-col p-2
+	    className={`fixed top-5  w-[80%]  bg-[var(--color-bg-alert)]  rounded-md  flex flex-col p-2 z-[1122]
 		md:max-w-[800px] md:h-[5rem] md:flex-row md:items-center
 		transition-[translate] duration-200
 		[&_*]:select-none

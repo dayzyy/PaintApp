@@ -7,6 +7,8 @@ import Alert from './components/Alert'
 
 import { FaExclamationCircle } from "react-icons/fa";
 
+import { Stage, Text, Layer, Circle } from "react-konva"
+
 const App = () => {
     const [theme, setTheme] = useTheme()
     const [showAlert, setShowAlert] = useState(false)
@@ -14,7 +16,7 @@ const App = () => {
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
 
     const disable_alert = () => {
-	localStorage.setItem('alert-disabled', true)
+	localStorage.setItem('alert-disabled', 'true')
 	setAlertDisabled(true)
     }
 
@@ -49,7 +51,7 @@ const App = () => {
 		    text='Pannel hidden'
 		    info='[Alt + A] to toggle'
 		    toggle_off={() => setShowAlert(false)}
-		    disable={disable_alert}
+    		    disable={disable_alert}
 		/>
 	    }
 
@@ -57,6 +59,18 @@ const App = () => {
 		is_shown={showPannel}
 		toggle_off={toggle_pannel_off}
 	    />
+
+	    <Stage width={window.innerWidth} height={window.innerHeight}>
+		<Layer>	    
+		    <Circle
+			x={500}
+			y={500}
+			radius={50}
+			fill='red'
+			draggable
+		    />
+		</Layer>
+	    </Stage>
 	</main>
     )
 }

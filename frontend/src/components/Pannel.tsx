@@ -1,38 +1,45 @@
-import { FaPenAlt } from "react-icons/fa";
-import { LuEraser } from "react-icons/lu";
-import { FaRegCircle } from "react-icons/fa";
-import { FaRegSquareFull } from "react-icons/fa6";
+import { useResolution } from "../context/ResolutionContext";
+import { useEffect, useRef, useState } from "react";
+
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { IoMdClose } from "react-icons/io";
-import { LuPaintbrushVertical } from "react-icons/lu";
-import { FaFillDrip } from "react-icons/fa6";
-import { TfiLayoutLineSolid } from "react-icons/tfi";
-import { MdOutlineTextFields } from "react-icons/md";
-import { LuImagePlus } from "react-icons/lu";
 
-import Mode from "./Mode";
-import { useResolution } from "../context/ResolutionContext";
-import { MouseEventHandler, useRef, useState } from "react";
+import ToolBox from "./ToolBox.tsx"
+import { tools, more_tools } from "../constants/tools";
+import { useTool } from "../context/ToolContext.tsx";
 
 type PannelProps = {
     is_shown: boolean
-    toggle_off: MouseEventHandler<HTMLDivElement>
+    toggle_off: () => void
 }
 
 const Pannel = ({is_shown, toggle_off}: PannelProps) => {
+    const {tool, setTool} = useTool()
+
     const [isToggled, setIsToggled] = useState(false)
-    const toggle_timer = useRef(null)
+    const toggle_timer = useRef<number | undefined>(undefined)
 
     const [extend, setExtend] = useState(false)
-    const extend_timer = useRef(null)
+    const extend_timer = useRef<number | undefined>(undefined)
 
     const [blockContent, setBlockContent] = useState(false)
-    const block_content_timer = useRef(null)
+    const block_content_timer = useRef<number | undefined>(undefined)
 
     const [showContent, setShowContent] = useState(false)
-    const show_content_timer = useRef(null)
+    const show_content_timer = useRef<number | undefined>(undefined)
 
     const { mobileViewport } = useResolution()
+
+    useEffect(() => {
+	console.log(tool)
+
+	return () => {
+	    clearTimeout(toggle_timer.current)
+	    clearTimeout(block_content_timer.current)
+	    clearTimeout(show_content_timer.current)
+	    clearTimeout(extend_timer.current)
+	}
+    }, [tool])
 
     const toggle_pannel = () => {
 	clearTimeout(toggle_timer.current)
@@ -68,24 +75,10 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 	toggle_off()
     }
 
-    const modes = [
-	<FaPenAlt/>,
-	<LuEraser className="text-[1.4rem]"/>,
-	<FaRegCircle className="text-[1.4rem]"/>,
-	<FaRegSquareFull className="text-[1.2rem]"/>
-    ]
-
-    const more_modes = [
-	<LuPaintbrushVertical className="text-[1.4rem]"/>,
-	<FaFillDrip className="text-[1.3rem]"/>,
-	<TfiLayoutLineSolid className="text-[1.5rem]"/>,
-	<MdOutlineTextFields className="text-[1.4rem]"/>,
-    ]
-
 	return (
 	    <div
 		id='pannel'
-		className={`fixed bottom-0   w-screen  py-2  rounded-xl  bg-[var(--color-bg-pannel)]  flex flex-col
+		className={`fixed bottom-0   w-screen  py-2  rounded-xl  bg-[var(--color-bg-pannel)]  flex flex-col z-[1121]
 		    md:flex-row md:bottom-auto md:left-0 md:w-[4.3rem]
 		    ${mobileViewport ? (extend ? 'h-[8.6rem]' : 'h-[4.3rem]') : (extend ? '!w-[8.6rem]' : 'w-[4.3rem]')}
 		    ${mobileViewport ? (!is_shown ? 'translate-y-[200%]' : 'translate-y-0') : (!is_shown ? '-translate-x-[200%]' : 'translate-x-0')}`}
@@ -97,9 +90,9 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 		    />
 
 		    {
-			modes.map((mode, index) => {
+			tools.map((tool, index) => {
 			    return (
-				<Mode key={index} icon={mode} on_click={undefined}/>
+				<ToolBox key={index} icon={tool.icon} on_click={() => setTool(tool.name)}/>
 			    )
 			})
 		    }
@@ -123,9 +116,9 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 			/>
 
 			{
-			    more_modes.map((mode, index) => {
+			    more_tools.map((tool, index) => {
 				return (
-				    <Mode key={index} icon={mode} on_click={undefined}/>
+				    <ToolBox key={index} icon={tool.icon} on_click={() => setTool(tool.name)}/>
 				)
 			    })
 			}
