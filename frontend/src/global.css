@@ -1,17 +1,53 @@
 @import 'tailwindcss';
 
+@import url('https://fonts.googleapis.com/css2?family=Nunito&display=swap');
+
 
 @layer base {
     * {
 	margin: 0;
 	padding: 0;
 	box-sizing: border-box;
+	font-family: 'Nunito', sans-serif;
+    }
+
+    h1 {
+	font-size: var(--size-text-primary);
+	font-weight: bold;
+    }
+
+    p {
+	font-size: var(--size-text-secondary);
     }
 
     [data-theme='light'] {
 	--color-bg-pannel: hsl(0, 0%, 95%);
 	--color-bg-mode: hsl(0, 0%, 90%);
+	--color-bg-alert: hsl(0, 13%, 46%);
+
+	--color-border-alert-act: hsl(0, 13%, 38%);
 
 	--color-icon-mode: hsl(0, 0%, 35%);
+	--color-icon-alert: hsl(240, 100%, 90%);
+
+	--color-text-alert-msg: hsl(0, 100%, 100%);
+	--color-text-alert-act: hsl(0, 100%, 90%);
+
+	--size-text-primary: 1.3rem;
+	--size-text-secondary: 1.1rem;
+    }
+}
+
+@layer components {
+    #pannel {
+	transition: height .1s ease,
+		    translate .5s ease;
+    }
+}
+
+@media (min-width: 768px) {
+    #pannel {
+	transition: width .1s ease,
+		    translate .5s ease;
     }
 }

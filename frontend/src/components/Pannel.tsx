@@ -12,9 +12,14 @@ import { LuImagePlus } from "react-icons/lu";
 
 import Mode from "./Mode";
 import { useResolution } from "../context/ResolutionContext";
-import { useRef, useState } from "react";
+import { MouseEventHandler, useRef, useState } from "react";
 
-const Pannel = () => {
+type PannelProps = {
+    is_shown: boolean
+    toggle_off: MouseEventHandler<HTMLDivElement>
+}
+
+const Pannel = ({is_shown, toggle_off}: PannelProps) => {
     const [isToggled, setIsToggled] = useState(false)
     const toggle_timer = useRef(null)
 
@@ -59,6 +64,10 @@ const Pannel = () => {
 	})
     }
 
+    const hide_pannel = () => {
+	toggle_off()
+    }
+
     const modes = [
 	<FaPenAlt/>,
 	<LuEraser className="text-[1.4rem]"/>,
@@ -75,11 +84,11 @@ const Pannel = () => {
 
 	return (
 	    <div
+		id='pannel'
 		className={`fixed bottom-0   w-screen  py-2  rounded-xl  bg-[var(--color-bg-pannel)]  flex flex-col
 		    md:flex-row md:bottom-auto md:left-0 md:w-[4.3rem]
-		    transition-[height] duration-100
-		    md:transition-[width] md:duration-100
-		    ${mobileViewport ? (extend ? 'h-[8.6rem]' : 'h-[4.3rem]') : (extend ? '!w-[8.6rem]' : 'w-[4.3rem]')}`}
+		    ${mobileViewport ? (extend ? 'h-[8.6rem]' : 'h-[4.3rem]') : (extend ? '!w-[8.6rem]' : 'w-[4.3rem]')}
+		    ${mobileViewport ? (!is_shown ? 'translate-y-[200%]' : 'translate-y-0') : (!is_shown ? '-translate-x-[200%]' : 'translate-x-0')}`}
 	    >
 		<div className="h-[4.3rem] md:h-fit md:w-[4.3rem] flex md:flex-col md:gap-8 items-center justify-around">
 		    <HiOutlineSquares2X2 
@@ -95,7 +104,10 @@ const Pannel = () => {
 			})
 		    }
 
-		    <IoMdClose className="text-[2rem] text-[var(--color-icon-mode)] cursor-pointer"/>
+		    <IoMdClose 
+			className="text-[2rem] text-[var(--color-icon-mode)] cursor-pointer"
+			onClick={hide_pannel}
+		    />
 		</div>
 
 		{isToggled &&
