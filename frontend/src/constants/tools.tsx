@@ -23,4 +23,6 @@ const more_tools: Tool[] = [
     {name: 'text', icon: <MdOutlineTextFields className="text-[1.4rem]"/>}
 ]
 
-export { tools, more_tools }
+const all_tools: Tool[] = tools.concat(more_tools)
+
+export { tools, more_tools, all_tools }

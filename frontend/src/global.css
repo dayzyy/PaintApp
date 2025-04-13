@@ -29,7 +29,7 @@
 	--color-bg-mode: hsl(0, 0%, 90%);
 	--color-bg-alert: hsl(0, 0%, 93%);
 
-	--color-border-alert-act: hsl(0, 13%, 38%);
+	--color-border-tool-active: hsl(0, 13%, 60%);
 
 	--color-icon-mode: hsl(0, 0%, 35%);
 	--color-icon-alert: hsl(0, 0%, 20%);

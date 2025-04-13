@@ -90,9 +90,9 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 		    />
 
 		    {
-			tools.map((tool, index) => {
+			tools.map((t, index) => {
 			    return (
-				<ToolBox key={index} icon={tool.icon} on_click={() => setTool(tool.name)}/>
+				<ToolBox key={index} icon={t.icon} selected={t.name == tool} on_click={() => setTool(t.name)}/>
 			    )
 			})
 		    }
@@ -116,9 +116,9 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 			/>
 
 			{
-			    more_tools.map((tool, index) => {
+			    more_tools.map((t, index) => {
 				return (
-				    <ToolBox key={index} icon={tool.icon} on_click={() => setTool(tool.name)}/>
+				    <ToolBox key={index} icon={t.icon} selected={t.name == tool} on_click={() => setTool(t.name)}/>
 				)
 			    })
 			}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import { useTheme } from './components/Theme'
+import { useTool } from './context/ToolContext';
 
 import Pannel from './components/Pannel'
 import Alert from './components/Alert'
@@ -8,12 +9,14 @@ import Alert from './components/Alert'
 import { FaExclamationCircle } from "react-icons/fa";
 
 import { Stage, Text, Layer, Circle } from "react-konva"
+import { all_tools } from './constants/tools';
 
 const App = () => {
     const [theme, setTheme] = useTheme()
     const [showAlert, setShowAlert] = useState(false)
     const [showPannel, setShowPannel] = useState(true)
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
+    const {tool} = useTool()
 
     const disable_alert = () => {
 	localStorage.setItem('alert-disabled', 'true')
@@ -54,6 +57,10 @@ const App = () => {
     		    disable={disable_alert}
 		/>
 	    }
+
+	    <div className='fixed top-3 right-3 [&_*]:!text-[2.3rem] opacity-30'>
+		{all_tools.find(t => t.name == tool)?.icon}
+	    </div>
 
 	    <Pannel
 		is_shown={showPannel}
