@@ -1,12 +1,12 @@
-import { ReactNode, MouseEventHandler } from "react"
+import { ReactNode } from "react"
 
-type ModeProps = {
+type ToolProps = {
     icon: ReactNode
     selected: boolean
-    on_click: MouseEventHandler<HTMLDivElement> | undefined
+    on_click: (() => void)
 }
 
-const Mode = ({icon, selected, on_click}: ModeProps) => {
+const ToolBox = ({icon, selected, on_click}: ToolProps) => {
     return (
 	<div
 	    className={`w-[3rem] h-[3rem]  rounded-xl  bg-[var(--color-bg-mode)]  grid place-items-center  text-[var(--color-icon-mode)]  cursor-pointer
@@ -19,4 +19,4 @@ const Mode = ({icon, selected, on_click}: ModeProps) => {
     )
 }
 
-export default Mode
+export default ToolBox

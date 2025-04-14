@@ -3,18 +3,26 @@ import { useEffect, useRef, useState } from "react";
 
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { IoMdClose } from "react-icons/io";
+import { RiResetLeftLine } from "react-icons/ri";
 
 import ToolBox from "./ToolBox.tsx"
-import { tools, more_tools } from "../constants/tools";
+import PannelColumn from "./PannelColumn.tsx";
+import GhostBlock from "./GhostBlock.tsx";
+
+import { tools } from "../constants/tools";
 import { useTool } from "../context/ToolContext.tsx";
+
+import { Tool } from "../types/tool.ts";
 
 type PannelProps = {
     is_shown: boolean
     toggle_off: () => void
+    clear_canvas: () => void
 }
 
-const Pannel = ({is_shown, toggle_off}: PannelProps) => {
+const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
     const {tool, setTool} = useTool()
+    const sliced_tools = useRef<Tool[]>([])
 
     const [isToggled, setIsToggled] = useState(false)
     const toggle_timer = useRef<number | undefined>(undefined)
@@ -75,59 +83,65 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 	toggle_off()
     }
 
-	return (
-	    <div
-		id='pannel'
-		className={`fixed bottom-0   w-screen  py-2  rounded-xl  bg-[var(--color-bg-pannel)]  flex flex-col z-[1121]
-		    md:flex-row md:bottom-auto md:left-0 md:w-[4.3rem]
-		    ${mobileViewport ? (extend ? 'h-[8.6rem]' : 'h-[4.3rem]') : (extend ? '!w-[8.6rem]' : 'w-[4.3rem]')}
-		    ${mobileViewport ? (!is_shown ? 'translate-y-[200%]' : 'translate-y-0') : (!is_shown ? '-translate-x-[200%]' : 'translate-x-0')}`}
-	    >
-		<div className="h-[4.3rem] md:h-fit md:w-[4.3rem] flex md:flex-col md:gap-8 items-center justify-around">
+    const split_tools = () => {
+	let jump = 3
+	let jumped = 0
+
+	while (jumped < tools.length) {
+	    sliced_tools.current = [...sliced_tools.current, tools.slice(jumped, jumped + jump)]
+	    jumped += jump
+
+	    if (jump == 3) jump = 4
+	}
+
+	if (jumped < tools.length) sliced_tools.current = [...sliced_tools.current, tools.slice(jumped, tools.length)]
+    }
+    split_tools()
+
+
+    return (
+	<div
+	    id='pannel'
+	    className={`fixed bottom-0   w-screen  py-2  rounded-xl  bg-[var(--color-bg-pannel)]  flex flex-col z-[1121]
+		md:flex-row md:bottom-auto md:left-0 md:w-[4.3rem]
+		${mobileViewport ? (extend ? 'h-[12.9rem]' : 'h-[4.3rem]') : (extend ? '!w-[12.9rem]' : 'w-[4.3rem]')}
+		${mobileViewport ? (!is_shown ? 'translate-y-[200%]' : 'translate-y-0') : (!is_shown ? '-translate-x-[200%]' : 'translate-x-0')}`}
+	>
+	    <div className="h-[4.3rem] md:h-fit md:w-[4.3rem] flex md:flex-col md:gap-8 items-center justify-around">
+		<GhostBlock>
 		    <HiOutlineSquares2X2 
-		    	className="text-[2rem] text-[var(--color-icon-mode)] cursor-pointer"
+			className="text-[2rem] text-[var(--color-icon-mode)] cursor-pointer"
 			onClick={toggle_pannel}
 		    />
+		</GhostBlock>
 
-		    {
-			tools.map((t, index) => {
-			    return (
-				<ToolBox key={index} icon={t.icon} selected={t.name == tool} on_click={() => setTool(t.name)}/>
-			    )
-			})
-		    }
+		{
+		    sliced_tools.current[0].map((t, index) => {
+			return (
+			    <ToolBox key={index} icon={t.icon} selected={t.name == tool.name} on_click={() => setTool(t)}/>
+			)
+		    })
+		}
 
+		<GhostBlock>
+		    <RiResetLeftLine
+			className="text-[1.8rem] text-[var(--color-icon-mode)] cursor-pointer"
+			onClick={clear_canvas}
+		    />
+		</GhostBlock>
+
+		<GhostBlock>
 		    <IoMdClose 
 			className="text-[2rem] text-[var(--color-icon-mode)] cursor-pointer"
 			onClick={hide_pannel}
 		    />
-		</div>
-
-		{isToggled &&
-		    <div
-			className={`h-[4.3rem] md:h-fit md:w-[4.3rem] flex md:flex-col md:gap-8 items-center justify-around
-			    [&_*]:transition-[opacity] [&_*]:duration-100
-			    ${blockContent ? '' : '[&_*]:hidden'}
-			    ${showContent ? '[&_*]:opacity-100' : '[&_*]:opacity-0'}`}
-		    >
-			<HiOutlineSquares2X2
-			    className="text-[2rem] !opacity-0"
-			    onClick={undefined}
-			/>
-
-			{
-			    more_tools.map((t, index) => {
-				return (
-				    <ToolBox key={index} icon={t.icon} selected={t.name == tool} on_click={() => setTool(t.name)}/>
-				)
-			    })
-			}
-
-			<IoMdClose className="text-[2rem] !opacity-0"/>
-		    </div>
-		}
+		</GhostBlock>
 	    </div>
-	)
+
+	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[1]}/>}
+	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[1]}/>}
+	</div>
+    )
     }
 
 export default Pannel

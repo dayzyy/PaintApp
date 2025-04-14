@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 
 import { useTheme } from './components/Theme'
 import { useTool } from './context/ToolContext';
+import { useResolution } from './context/ResolutionContext.tsx';
 
 import Pannel from './components/Pannel'
 import Alert from './components/Alert'
@@ -11,16 +12,21 @@ import { Stroke } from './types/stroke.ts'
 import { FaExclamationCircle } from "react-icons/fa";
 
 import { Stage, Layer, Circle, Line } from "react-konva"
-import { all_tools } from './constants/tools';
+import { tools } from './constants/tools';
 import { KonvaEventObject } from 'konva/lib/Node';
+import Konva from 'konva';
 
 const App = () => {
+
     const [theme, setTheme] = useTheme()
+    const { mobileViewport } = useResolution()
+
     const [showAlert, setShowAlert] = useState(false)
     const [showPannel, setShowPannel] = useState(true)
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
     const { tool } = useTool()
 
+    const layerRef = useRef<Konva.Layer | null>(null)
     const [lines, setLines] = useState<Stroke[]>([])
     const isDrawing = useRef(false)
 
@@ -53,12 +59,12 @@ const App = () => {
     }
 
     const start_draw = (event: KonvaEventObject<MouseEvent> | KonvaEventObject<TouchEvent> ) => {
-	if (tool != 'pen' && tool != 'eraser') return
+	if (tool.name != 'pen' && tool.name != 'eraser') return
 	    
 	isDrawing.current = true
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (pos) {
-	    setLines([...lines, {tool, points: [pos.x, pos.y]}])
+	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y]}])
 	}
     }
 
@@ -66,7 +72,7 @@ const App = () => {
 	isDrawing.current = false
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (pos) {
-	    setLines([...lines, {tool, points: [pos.x, pos.y]}])
+	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y]}])
 	}
     }
 
@@ -83,6 +89,13 @@ const App = () => {
 	}
     }
 
+    const clear_canvas = () => {
+	if (layerRef.current) {
+	    layerRef.current.destroyChildren()
+	    layerRef.current.draw()
+	}
+    }
+
     return (
 	<main className='w-screen h-screen  flex justify-center items-center'>
 	    {!alertDisabled && showAlert &&
@@ -95,13 +108,16 @@ const App = () => {
 		/>
 	    }
 
-	    <div className='fixed top-3 right-3 [&_*]:!text-[2.3rem] opacity-30 z-[1121]'>
-		{all_tools.find(t => t.name == tool)?.icon}
-	    </div>
+	    {mobileViewport && 
+		<div className='fixed top-3 left-3 [&_*]:!text-[2.3rem] opacity-30 z-[1121]'>
+		    {tools.find(t => t.name == tool.name)?.icon}
+		</div>
+	    }
 
 	    <Pannel
 		is_shown={showPannel}
 		toggle_off={toggle_pannel_off}
+		clear_canvas={clear_canvas}
 	    />
 
 	    <Stage
@@ -114,7 +130,7 @@ const App = () => {
 		onTouchEnd={stop_draw}
 		onTouchMove={draw}
 	    >
-		<Layer>
+		<Layer ref={layerRef}>
 		    {lines.map((line, index) => {
 			return (
 			    <Line

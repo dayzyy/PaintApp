@@ -13,16 +13,11 @@ const tools: Tool[] = [
     {name: 'pen', icon: <FaPenAlt/>},
     {name: 'eraser', icon: <LuEraser className="text-[1.4rem]"/>},
     {name: 'circle', icon: <FaRegCircle className="text-[1.4rem]"/>},
-    {name: 'square', icon: <FaRegSquareFull className="text-[1.2rem]"/>}
-]
-
-const more_tools: Tool[] = [
+    {name: 'square', icon: <FaRegSquareFull className="text-[1.2rem]"/>},
     {name: 'brush', icon: <LuPaintbrushVertical className="text-[1.4rem]"/>},
     {name: 'fill', icon: <FaFillDrip className="text-[1.3rem]"/>},
     {name: 'line', icon: <TfiLayoutLineSolid className="text-[1.5rem]"/>},
     {name: 'text', icon: <MdOutlineTextFields className="text-[1.4rem]"/>}
 ]
 
-const all_tools: Tool[] = tools.concat(more_tools)
-
-export { tools, more_tools, all_tools }
+export { tools }

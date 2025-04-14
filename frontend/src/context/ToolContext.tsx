@@ -1,10 +1,12 @@
 import { createContext, ReactNode, useContext, useState } from "react";
 
-import { ToolName } from "../types/tool";
+import { Tool } from "../types/tool";
+
+import { FaPenAlt } from "react-icons/fa";
 
 type ToolContextType = {
-    tool: ToolName
-    setTool: (name: ToolName) => void
+    tool: Tool
+    setTool: (t: Tool) => void
 }
 
 type ToolProviderProps = {
@@ -14,7 +16,7 @@ type ToolProviderProps = {
 const ToolContext = createContext<ToolContextType | null>(null)
 
 const ToolProvider = ({children}: ToolProviderProps) => {
-    const [tool, setTool] = useState<ToolName>('pen')
+    const [tool, setTool] = useState<Tool>({name: 'pen', icon: <FaPenAlt/>})
     
     return (
 	<ToolContext.Provider value={{tool, setTool}}>
