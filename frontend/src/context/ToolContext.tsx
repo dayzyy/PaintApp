@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
 import { Tool } from "../types/tool";
 
@@ -17,6 +17,10 @@ const ToolContext = createContext<ToolContextType | null>(null)
 
 const ToolProvider = ({children}: ToolProviderProps) => {
     const [tool, setTool] = useState<Tool>({name: 'pen', icon: <FaPenAlt/>})
+
+    useEffect(() => {
+	document.querySelector('body').style.cursor = `url(cursors/${tool.name}.cur), auto`
+    }, [tool])
     
     return (
 	<ToolContext.Provider value={{tool, setTool}}>

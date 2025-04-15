@@ -25,7 +25,7 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
     const { color, setColor } = useColor()
 
     const {tool, setTool} = useTool()
-    const sliced_tools = useRef<Tool[]>([])
+    const sliced_tools = useRef<Tool[][]>([])
 
     const [isToggled, setIsToggled] = useState(false)
     const toggle_timer = useRef<number | undefined>(undefined)
@@ -48,7 +48,7 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
 	    clearTimeout(show_content_timer.current)
 	    clearTimeout(extend_timer.current)
 	}
-    }, [tool])
+    }, [])
 
     const toggle_pannel = () => {
 	clearTimeout(toggle_timer.current)
@@ -117,7 +117,7 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
 		</GhostBlock>
 
 		{
-		    sliced_tools.current[0].map((t: Tool, index: number) => {
+		    sliced_tools.current[0].map((t, index) => {
 			return (
 			    <ToolBox key={index} icon={t.icon} selected={t.name == tool.name} on_click={() => setTool(t)}/>
 			)
@@ -156,7 +156,7 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
 	    </div>
 
 	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[1]}/>}
-	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[1]}/>}
+	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[2]}/>}
 	</div>
     )
     }
