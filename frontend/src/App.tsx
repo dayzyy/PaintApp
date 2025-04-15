@@ -61,7 +61,7 @@ const App = () => {
     }
 
     const start_draw = (event: KonvaEventObject<MouseEvent> | KonvaEventObject<TouchEvent> ) => {
-	if (tool.name != 'pen' && tool.name != 'eraser') return
+	if (tool.name != 'pen' && tool.name != 'eraser' && tool.name != 'brush') return
 	    
 	isDrawing.current = true
 	const pos = event.target.getStage()?.getPointerPosition()
@@ -153,7 +153,7 @@ const App = () => {
 	    >
 		<Layer ref={layerRef}>
 		    {lines.map((line, index) => {
-			return (
+			return (<>
 			    <Line
 				key={index}
 				points={line.points}
@@ -164,7 +164,20 @@ const App = () => {
 				lineJoin='round'
 				globalCompositeOperation={line.tool === 'eraser' ? 'destination-out' : 'source-over'}
 			    />
-			)
+			    {line.tool == 'brush' &&
+				<Line
+				    key={index}
+				    points={line.points}
+				    stroke={line.color}
+				    strokeWidth={5 + 10}
+				    opacity={0.8}
+				    tension={0.5}
+				    lineCap='round'
+				    lineJoin='round'
+				    globalCompositeOperation='source-over'
+				/>
+			    }
+			</>)
 		    })}
 		</Layer>
 	    </Stage>
