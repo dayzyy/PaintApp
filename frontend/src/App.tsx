@@ -26,7 +26,7 @@ const App = () => {
     const [showPannel, setShowPannel] = useState(true)
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
     const { tool } = useTool()
-    const { color } = useColor()
+    const { color, setColor } = useColor()
 
     const layerRef = useRef<Konva.Layer | null>(null)
     const [lines, setLines] = useState<Stroke[]>([])
@@ -98,6 +98,24 @@ const App = () => {
 	}
     }
 
+    const handle_click = (event: KonvaEventObject<MouseEvent> | KonvaEventObject<TouchEvent>) => {
+	if (tool.name == 'pick') {
+	    const pos = event.target.getStage()?.getPointerPosition()
+
+	    if (pos) {
+		const context = layerRef.current?.getCanvas()._canvas.getContext('2d')
+
+		if (context) {
+		    const pixel = context.getImageData(pos.x, pos.y, 1, 1).data
+
+		    const [r, g, b, a] = pixel
+		    if (pixel[3] == 0) setColor('#fff')
+		    else setColor(`rgba(${r}, ${g}, ${b}, ${a / 255})`)
+		}
+	    }
+	}
+    }
+
     return (
 	<main className='w-screen h-screen  flex justify-center items-center'>
 	    {!alertDisabled && showAlert &&
@@ -131,6 +149,7 @@ const App = () => {
 		onTouchStart={start_draw}
 		onTouchEnd={stop_draw}
 		onTouchMove={draw}
+		onClick={handle_click}
 	    >
 		<Layer ref={layerRef}>
 		    {lines.map((line, index) => {
