@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTheme } from './components/Theme'
 import { useTool } from './context/ToolContext';
 import { useResolution } from './context/ResolutionContext.tsx';
+import { useColor } from './context/ColorContext.tsx';
 
 import Pannel from './components/Pannel'
 import Alert from './components/Alert'
@@ -25,6 +26,7 @@ const App = () => {
     const [showPannel, setShowPannel] = useState(true)
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
     const { tool } = useTool()
+    const { color } = useColor()
 
     const layerRef = useRef<Konva.Layer | null>(null)
     const [lines, setLines] = useState<Stroke[]>([])
@@ -64,7 +66,7 @@ const App = () => {
 	isDrawing.current = true
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (pos) {
-	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y]}])
+	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y], color: color}])
 	}
     }
 
@@ -72,7 +74,7 @@ const App = () => {
 	isDrawing.current = false
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (pos) {
-	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y]}])
+	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y], color: color}])
 	}
     }
 
@@ -136,7 +138,7 @@ const App = () => {
 			    <Line
 				key={index}
 				points={line.points}
-				stroke={'black'}
+				stroke={line.color}
 				strokeWidth={5}
 				tension={0.5}
 				lineCap='round'

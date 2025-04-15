@@ -11,6 +11,7 @@ import GhostBlock from "./GhostBlock.tsx";
 
 import { tools } from "../constants/tools";
 import { useTool } from "../context/ToolContext.tsx";
+import { useColor } from "../context/ColorContext.tsx";
 
 import { Tool } from "../types/tool.ts";
 
@@ -21,6 +22,8 @@ type PannelProps = {
 }
 
 const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
+    const { color, setColor } = useColor()
+
     const {tool, setTool} = useTool()
     const sliced_tools = useRef<Tool[]>([])
 
@@ -39,8 +42,6 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
     const { mobileViewport } = useResolution()
 
     useEffect(() => {
-	console.log(tool)
-
 	return () => {
 	    clearTimeout(toggle_timer.current)
 	    clearTimeout(block_content_timer.current)
@@ -84,14 +85,14 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
     }
 
     const split_tools = () => {
-	let jump = 3
+	let jump = 2
 	let jumped = 0
 
 	while (jumped < tools.length) {
 	    sliced_tools.current = [...sliced_tools.current, tools.slice(jumped, jumped + jump)]
 	    jumped += jump
 
-	    if (jump == 3) jump = 4
+	    if (jump == 2) jump = 4
 	}
 
 	if (jumped < tools.length) sliced_tools.current = [...sliced_tools.current, tools.slice(jumped, tools.length)]
@@ -116,12 +117,28 @@ const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
 		</GhostBlock>
 
 		{
-		    sliced_tools.current[0].map((t, index) => {
+		    sliced_tools.current[0].map((t: Tool, index: number) => {
 			return (
 			    <ToolBox key={index} icon={t.icon} selected={t.name == tool.name} on_click={() => setTool(t)}/>
 			)
 		    })
 		}
+
+		<GhostBlock>
+		    <div className="relative  w-full h-full  grid place-items-center  bg-[var(--color-bg-mode)]  rounded-xl">
+			<div
+			    className="absolute w-[90%] h-[90%] rounded-xl"
+			    style={{background: color}}
+			></div>
+
+			<input
+			    value={color}
+			    type="color"
+			    className="w-full h-full  opacity-0  cursor-pointer"
+			    onChange={(e) => setColor(e.target.value)}
+			/>
+		    </div>
+		</GhostBlock>
 
 		<GhostBlock>
 		    <RiResetLeftLine
