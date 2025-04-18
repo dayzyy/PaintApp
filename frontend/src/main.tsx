@@ -4,12 +4,15 @@ import App from './App.tsx'
 import { ResolutionProvider } from './context/ResolutionContext.tsx'
 import { ToolProvider } from './context/ToolContext.tsx'
 import { ColorProvider } from './context/ColorContext.tsx'
+import { CanvasProvider } from './context/CanvasContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
     <ResolutionProvider>
 	<ToolProvider>
 	    <ColorProvider>
-		<App />
+		<CanvasProvider>
+		    <App />
+		</CanvasProvider>
 	    </ColorProvider>
 	</ToolProvider>
     </ResolutionProvider>

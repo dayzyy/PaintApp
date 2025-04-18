@@ -1,0 +1,344 @@
+import Konva from 'konva';
+import { Stage, Layer, Circle, Rect, Line } from 'react-konva';
+
+import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
+
+import { CanvasMouseEvent } from '../types/events.ts'
+
+import { Fragment } from 'react/jsx-runtime';
+
+import { useRef, useEffect, RefObject } from 'react';
+
+import { useColor } from '../context/ColorContext';
+import { useTool } from '../context/ToolContext';
+import { useCanvas } from '../context/CanvasContext.tsx';
+
+const Canvas = () => {
+    const { color, setColor } = useColor()
+    const { tool } = useTool()
+
+    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, lines, shapes, setLines, setShapes} = useCanvas()
+
+    const isDrawing = useRef(false)
+    const resize_animationFrameID = useRef<number | null>(null)
+    const draw_line_animationFrameID = useRef<number | null>(null)
+
+    type TempShape = Konva.Circle | Konva.Rect | Konva.Line
+
+    const tempShape = useRef<TempShape | null>(null)
+
+    useEffect(() => {
+	console.log(shapes)
+    }, [shapes])
+
+    const start_draw = (event: CanvasMouseEvent) => {
+	isDrawing.current = true
+	const pos = event.target.getStage()?.getPointerPosition()
+	if (pos) {
+	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y], color: color}])
+	}
+    }
+
+    const stop_draw = (event: CanvasMouseEvent) => {
+	isDrawing.current = false
+	const pos = event.target.getStage()?.getPointerPosition()
+	if (pos) {
+	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y], color: color}])
+	}
+    }
+
+    const draw = (event: CanvasMouseEvent) => {
+	if (draw_line_animationFrameID.current) return
+
+	draw_line_animationFrameID.current = requestAnimationFrame(() => {
+	    const point = event.target.getStage()?.getPointerPosition()
+	    if (point) {
+		let last_line = lines[lines.length - 1]
+		last_line.points = last_line.points.concat([point.x, point.y])
+
+		lines.splice(lines.length - 1, 1, last_line)
+		setLines(lines.concat())
+
+		draw_line_animationFrameID.current = null
+	    }
+	})
+    }
+
+    const draw_shape_preview = (event: CanvasMouseEvent) => {
+	if (tool.name == 'circle') {
+	    const pos = event.target.getStage()?.getPointerPosition()
+	    if (!pos) return
+
+	    tempShape.current = new Konva.Circle({x: pos.x, y:pos.y, stroke: color, strokeWidth: 2,  radius: 1})
+	    tempShapeLayerRef.current?.add(tempShape.current)
+	    tempShapeLayerRef.current?.batchDraw()
+	}
+	else if (tool.name == 'square') {
+	    const pos = event.target.getStage()?.getPointerPosition()
+	    if (!pos) return
+
+	    tempShape.current = new Konva.Rect({x: pos.x, y:pos.y, stroke: color, width: 1, height: 1})
+	    tempShapeLayerRef.current?.add(tempShape.current)
+	    tempShapeLayerRef.current?.batchDraw()
+	}
+	else if (tool.name == 'line') {
+	    const pos = event.target.getStage()?.getPointerPosition()
+	    if (!pos) return
+
+	    tempShape.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, length: 1})
+	    tempShapeLayerRef.current?.add(tempShape.current)
+	    tempShapeLayerRef.current?.batchDraw()
+	}
+    }
+
+    const resize_shape_preview = (event: CanvasMouseEvent, temp_shape: RefObject<TempShape | null>) => {
+	if (resize_animationFrameID.current || !temp_shape.current) return
+
+	resize_animationFrameID.current = requestAnimationFrame(() => {
+	    const shape = temp_shape.current
+	    if (!shape) return
+
+	    const pos = event.target.getStage()?.getPointerPosition()
+	    if (!pos) return
+
+	    const dx = pos.x - shape.x()
+	    const dy = pos.y - shape.y()
+
+	    if (shape instanceof Konva.Circle) {
+		const radius = Math.sqrt(dx * dx + dy * dy)
+		if (radius >= 1 && Math.abs(shape.radius() - radius) > 5) {
+		    shape.radius(radius)
+		    tempShapeLayerRef.current?.batchDraw()
+		}
+	    }
+	    else if (shape instanceof Konva.Rect) {
+		let new_width = Math.abs(dx)
+		let new_height = Math.abs(dy)
+
+		shape.scaleX(dx >= 0 ? 1 : -1)
+		shape.scaleY(dy >= 0 ? 1 : -1)
+
+		shape.width(new_width)
+		shape.height(new_height)
+
+		tempShapeLayerRef.current?.batchDraw()
+	    }
+	    else if (shape instanceof Konva.Line) {
+		const start_x = shape.points()[0]
+		const start_y = shape.points()[1]
+		shape.points([start_x, start_y, pos.x, pos.y])
+
+		tempShapeLayerRef.current?.batchDraw()
+	    }
+
+	    resize_animationFrameID.current = null
+	})
+    }
+
+    const commit_shape_preview = (temp_shape: RefObject<TempShape | null>) => {
+	const shape = temp_shape.current
+	if (!shape) return
+
+	if (shape instanceof Konva.Circle) {
+	    setShapes((prev: Shape[]): Shape[] => {
+		return (
+		    [
+			...prev,
+			new CircleObj(
+			    shape.x(),
+			    shape.y(),
+			    shape.stroke(),
+			    shape.radius()
+			)
+		    ]
+		)
+	    })
+	}
+	else if (shape instanceof Konva.Rect) {
+	    setShapes((prev: Shape[]): Shape[] => {
+		return (
+		    [
+			...prev,
+			new RectangleObj(
+			    shape.x(),
+			    shape.y(),
+			    shape.stroke(),
+			    shape.width(),
+			    shape.height()
+			)
+		    ]
+		)
+	    })
+	}
+	else if (shape instanceof Konva.Line) {
+	    setShapes((prev: Shape[]): Shape[] => {
+		return (
+		    [
+			...prev,
+			new LineObj(
+			    shape.x(),
+			    shape.y(),
+			    shape.stroke(),
+			    shape.points()
+			)
+		    ]
+		)
+	    })
+	}
+	tempShape.current = null
+	resize_animationFrameID.current = null
+    }
+
+    const handle_mousedown = (event: CanvasMouseEvent) => {
+	if (tool.name == 'pen' || tool.name == 'eraser' || tool.name == 'brush') {
+	    start_draw(event)
+	} else {
+	    draw_shape_preview(event)
+	}
+    }
+
+    const handle_mousemove = (event: CanvasMouseEvent) => {
+	if (isDrawing.current) {
+	    draw(event)
+	}
+	else if (tempShape.current) {
+	    resize_shape_preview(event, tempShape)
+	}
+    }
+
+    const handle_mouseup = (event: CanvasMouseEvent) => {
+	if (isDrawing.current) {
+	    stop_draw(event)
+	} else if (tempShape) {
+	    commit_shape_preview(tempShape)
+	}
+    }
+
+    const handle_click = (event: CanvasMouseEvent) => {
+	if (tool.name == 'pick') {
+	    const pos = event.target.getStage()?.getPointerPosition()
+	    let color_set = false
+
+	    if (pos) {
+		for (let i = 0; i < layers.length; i++) {
+		    const context = layers[i].current?.getCanvas()._canvas.getContext('2d')
+
+		    if (context) {
+			const pixel = context.getImageData(pos.x, pos.y, 1, 1).data
+
+			const [r, g, b, a] = pixel
+			if (pixel[3] == 0) {
+			    if (i == layers.length - 1) {
+				setColor('#fff')
+				color_set = true
+			    }
+			    else continue
+			} 
+			else {
+			    setColor(`rgba(${r}, ${g}, ${b}, ${a / 255})`)
+			    color_set = true
+			    break
+			}
+		    }
+		}
+		if (!color_set) setColor('#fff')
+	    }
+	}
+    }
+
+    return ( 
+	<Stage
+	    width={window.innerWidth}
+	    height={window.innerHeight}
+	    onMouseDown={handle_mousedown}
+	    onMouseUp={handle_mouseup}
+	    onMouseMove={handle_mousemove}
+	    onTouchStart={start_draw}
+	    onTouchEnd={stop_draw}
+	    onTouchMove={draw}
+	    onClick={handle_click}
+	>
+	    <Layer ref={linesLayerRef}>
+		{lines.map((line, index) => {
+		    return (<Fragment key={index}>
+			<Line
+			    points={line.points}
+			    stroke={line.color}
+			    strokeWidth={5}
+			    tension={0.5}
+			    lineCap='round'
+			    lineJoin='round'
+			    globalCompositeOperation={line.tool === 'eraser' ? 'destination-out' : 'source-over'}
+			/>
+			{line.tool == 'brush' &&
+			    <Line
+				points={line.points}
+				stroke={line.color}
+				strokeWidth={5 + 10}
+				opacity={0.8}
+				tension={0.5}
+				lineCap='round'
+				lineJoin='round'
+				globalCompositeOperation='source-over'
+			    />
+			}
+		    </Fragment>)
+		})}
+	    </Layer>
+
+	    <Layer ref={shapesLayerRef}>
+		{
+		    shapes.map((shape) => {
+			if (shape.type == 'circle'){
+			    const circle = shape as CircleObj
+			    return (
+				<Circle 
+				    key={circle.id}
+				    x={circle.x}
+				    y={circle.y}
+				    stroke={circle.stroke_color}
+				    radius={circle.radius}
+				    draggable={circle.draggable}
+				/>
+			    )
+			}
+
+			if (shape.type == 'rectangle'){
+			    const rectangle = shape as RectangleObj
+			    return (
+				<Rect
+				    key={rectangle.id}
+				    x={rectangle.x}
+				    y={rectangle.y}
+				    stroke={rectangle.stroke_color}
+				    width={rectangle.width}
+				    height={rectangle.height}
+				    draggable={rectangle.draggable}
+				/>
+			    )
+			}
+
+			if (shape.type == 'line'){
+			    const line = shape as LineObj
+			    return (
+				<Line
+				    key={line.id}
+				    x={line.x}
+				    y={line.y}
+				    stroke={line.stroke_color}
+				    points={line.points}
+				    draggable={line.draggable}
+				/>
+			    )
+			}
+		    })
+		}
+	    </Layer>
+
+	    <Layer ref={tempShapeLayerRef}>
+	    </Layer>
+	</Stage>
+    )
+}
+
+export default Canvas

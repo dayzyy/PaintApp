@@ -12,6 +12,7 @@ import GhostBlock from "./GhostBlock.tsx";
 import { tools } from "../constants/tools";
 import { useTool } from "../context/ToolContext.tsx";
 import { useColor } from "../context/ColorContext.tsx";
+import { useCanvas } from "../context/CanvasContext.tsx";
 
 import { Tool } from "../types/tool.ts";
 
@@ -21,8 +22,9 @@ type PannelProps = {
     clear_canvas: () => void
 }
 
-const Pannel = ({is_shown, toggle_off, clear_canvas}: PannelProps) => {
+const Pannel = ({is_shown, toggle_off}: PannelProps) => {
     const { color, setColor } = useColor()
+    const { clear_canvas } = useCanvas()
 
     const {tool, setTool} = useTool()
     const sliced_tools = useRef<Tool[][]>([])
