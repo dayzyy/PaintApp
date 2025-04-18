@@ -12,12 +12,13 @@ import Canvas from './components/Canvas.tsx';
 import Konva from 'konva';
 
 import { FaExclamationCircle } from "react-icons/fa";
+import { SlCursorMove } from "react-icons/sl";
 
 const App = () => {
     const [theme, setTheme] = useTheme()
     const { mobileViewport } = useResolution()
 
-    const { tool } = useTool()
+    const { tool, setTool } = useTool()
 
     const [showAlert, setShowAlert] = useState(false)
     const [showPannel, setShowPannel] = useState(true)
@@ -42,6 +43,9 @@ const App = () => {
 		    else setShowAlert(false)
 		    return !prev
 		})
+	    }
+	    else if (event.key == 'Escape') {
+		setTool({name: 'select', icon: <SlCursorMove className="text-[1.4rem]"/>})
 	    }
 	}
 

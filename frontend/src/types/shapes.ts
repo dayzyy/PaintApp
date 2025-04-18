@@ -28,11 +28,15 @@ class CircleObj extends Shape  {
 
 class RectangleObj extends Shape {
     type: ShapeType = 'rectangle'
+    dx
+    dy
     width
     height
 
-    constructor(x: number, y: number, stroke_color: string | CanvasGradient, width: number, height: number) {
+    constructor(x: number, y: number, dx: number, dy: number, stroke_color: string | CanvasGradient, width: number, height: number) {
 	super(x, y, stroke_color)
+	this.dx = dx
+	this.dy = dy
 	this.width = width
 	this.height = height
     }

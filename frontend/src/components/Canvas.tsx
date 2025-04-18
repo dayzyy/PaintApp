@@ -7,7 +7,7 @@ import { CanvasMouseEvent } from '../types/events.ts'
 
 import { Fragment } from 'react/jsx-runtime';
 
-import { useRef, RefObject } from 'react';
+import { useState, useRef, RefObject } from 'react';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
@@ -27,10 +27,15 @@ const Canvas = () => {
     const tempShape = useRef<TempShape | null>(null)
     const tempLine = useRef<Konva.Line | null>(null)
 
+    const isSelected = useRef<string | null>(null)
+
     const start_draw = (event: CanvasMouseEvent) => {
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (pos) {
-	    tempLine.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, strokeWidth: tool.name == 'brush' ? 5 : 2})
+	    tempLine.current = new Konva.Line({
+		points: [pos.x, pos.y], stroke: color, strokeWidth: tool.name == 'brush' ? 5 : 2,
+		tension: 0.5, lineCap: 'round', lineJoin: 'round'
+	    })
 	    tempLineLayerRef.current?.add(tempLine.current)
 	}
     }
@@ -66,7 +71,7 @@ const Canvas = () => {
 	    const pos = event.target.getStage()?.getPointerPosition()
 	    if (!pos) return
 
-	    tempShape.current = new Konva.Circle({x: pos.x, y:pos.y, stroke: color, strokeWidth: 2,  radius: 1})
+	    tempShape.current = new Konva.Circle({x: pos.x, y:pos.y, stroke: color, radius: 0})
 	    tempShapeLayerRef.current?.add(tempShape.current)
 	    tempShapeLayerRef.current?.batchDraw()
 	}
@@ -74,7 +79,7 @@ const Canvas = () => {
 	    const pos = event.target.getStage()?.getPointerPosition()
 	    if (!pos) return
 
-	    tempShape.current = new Konva.Rect({x: pos.x, y:pos.y, stroke: color, width: 1, height: 1})
+	    tempShape.current = new Konva.Rect({x: pos.x, y:pos.y, stroke: color, width: 1, height: 0})
 	    tempShapeLayerRef.current?.add(tempShape.current)
 	    tempShapeLayerRef.current?.batchDraw()
 	}
@@ -82,7 +87,7 @@ const Canvas = () => {
 	    const pos = event.target.getStage()?.getPointerPosition()
 	    if (!pos) return
 
-	    tempShape.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, length: 1})
+	    tempShape.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, length: 0, tension: 0.5, lineCap: 'round', lineJoin: 'round'})
 	    tempShapeLayerRef.current?.add(tempShape.current)
 	    tempShapeLayerRef.current?.batchDraw()
 	}
@@ -103,7 +108,7 @@ const Canvas = () => {
 
 	    if (shape instanceof Konva.Circle) {
 		const radius = Math.sqrt(dx * dx + dy * dy)
-		if (radius >= 1 && Math.abs(shape.radius() - radius) > 5) {
+		if (radius >= 0 && Math.abs(shape.radius() - radius) > 5) {
 		    shape.radius(radius)
 		    tempShapeLayerRef.current?.batchDraw()
 		}
@@ -159,6 +164,8 @@ const Canvas = () => {
 			new RectangleObj(
 			    shape.x(),
 			    shape.y(),
+			    shape.scaleX(),
+			    shape.scaleY(),
 			    shape.stroke(),
 			    shape.width(),
 			    shape.height()
@@ -182,8 +189,42 @@ const Canvas = () => {
 		)
 	    })
 	}
+	tempShapeLayerRef.current?.destroyChildren()
 	tempShape.current = null
 	resize_animationFrameID.current = null
+    }
+
+    const pick_color = (event: CanvasMouseEvent) => {
+	const pos = event.target.getStage()?.getPointerPosition()
+	let color_set = false
+
+	if (pos) {
+	    for (let i = 0; i < layers.length; i++) {
+		const context = layers[i].current?.getCanvas()._canvas.getContext('2d')
+
+		if (context) {
+		    const pixel = context.getImageData(pos.x, pos.y, 1, 1).data
+
+		    const [r, g, b, a] = pixel
+		    if (pixel[3] == 0) {
+			if (i == layers.length - 1) {
+			    setColor('#fff')
+			    color_set = true
+			}
+			else continue
+		    } 
+		    else {
+			setColor(`rgba(${r}, ${g}, ${b}, ${a / 255})`)
+			color_set = true
+			break
+		    }
+		}
+	    }
+	    if (!color_set) setColor('#fff')
+	}
+    }
+
+    const fill_shape = (event: CanvasMouseEvent) => {
     }
 
     const handle_mousedown = (event: CanvasMouseEvent) => {
@@ -212,34 +253,19 @@ const Canvas = () => {
     }
 
     const handle_click = (event: CanvasMouseEvent) => {
-	if (tool.name == 'pick') {
-	    const pos = event.target.getStage()?.getPointerPosition()
-	    let color_set = false
+	if (tool.name == 'pick') pick_color(event)
+	if (tool.name == 'fill') fill_shape(event)
+    }
 
-	    if (pos) {
-		for (let i = 0; i < layers.length; i++) {
-		    const context = layers[i].current?.getCanvas()._canvas.getContext('2d')
+    const handle_select = (id: string) => {
+	if (tool.name == 'select') {
+	    isSelected.current = id
+	}
+    }
 
-		    if (context) {
-			const pixel = context.getImageData(pos.x, pos.y, 1, 1).data
-
-			const [r, g, b, a] = pixel
-			if (pixel[3] == 0) {
-			    if (i == layers.length - 1) {
-				setColor('#fff')
-				color_set = true
-			    }
-			    else continue
-			} 
-			else {
-			    setColor(`rgba(${r}, ${g}, ${b}, ${a / 255})`)
-			    color_set = true
-			    break
-			}
-		    }
-		}
-		if (!color_set) setColor('#fff')
-	    }
+    const handle_drag_start = (event: CanvasMouseEvent, id: string) => {
+	if (isSelected.current != id) {
+	    event.target.stopDrag()
 	}
     }
 
@@ -261,6 +287,10 @@ const Canvas = () => {
 			<Line
 			    points={line.points}
 			    stroke={line.color}
+			    strokeWidth={2}
+			    tension={0.5}
+			    lineCap='round'
+			    lineJoin='round'
 			    globalCompositeOperation={line.tool === 'eraser' ? 'destination-out' : 'source-over'}
 			/>
 			{line.tool == 'brush' &&
@@ -270,11 +300,19 @@ const Canvas = () => {
 				strokeWidth={5}
 				opacity={0.8}
 				tension={0.5}
+				lineCap='round'
+				lineJoin='round'
 				globalCompositeOperation='source-over'
 			    />
 			}
 		    </Fragment>)
 		})}
+	    </Layer>
+
+	    <Layer ref={tempShapeLayerRef}>
+	    </Layer>
+
+	    <Layer ref={tempLineLayerRef}>
 	    </Layer>
 
 	    <Layer ref={shapesLayerRef}>
@@ -289,7 +327,9 @@ const Canvas = () => {
 				    y={circle.y}
 				    stroke={circle.stroke_color}
 				    radius={circle.radius}
-				    draggable={circle.draggable}
+				    onMouseDown={() => handle_select(circle.id)}
+				    onDragStart={(e) => handle_drag_start(e, circle.id)}
+				    draggable
 				/>
 			    )
 			}
@@ -301,10 +341,14 @@ const Canvas = () => {
 				    key={rectangle.id}
 				    x={rectangle.x}
 				    y={rectangle.y}
+				    scaleX={rectangle.dx}
+				    scaleY={rectangle.dy}
 				    stroke={rectangle.stroke_color}
 				    width={rectangle.width}
 				    height={rectangle.height}
-				    draggable={rectangle.draggable}
+				    onMouseDown={() => handle_select(rectangle.id)}
+				    onDragStart={(e) => handle_drag_start(e, rectangle.id)}
+				    draggable
 				/>
 			    )
 			}
@@ -318,18 +362,14 @@ const Canvas = () => {
 				    y={line.y}
 				    stroke={line.stroke_color}
 				    points={line.points}
-				    draggable={line.draggable}
+				    onMouseDown={() => handle_select(line.id)}
+				    onDragStart={(e) => handle_drag_start(e, line.id)}
+				    draggable
 				/>
 			    )
 			}
 		    })
 		}
-	    </Layer>
-
-	    <Layer ref={tempShapeLayerRef}>
-	    </Layer>
-
-	    <Layer ref={tempLineLayerRef}>
 	    </Layer>
 	</Stage>
     )

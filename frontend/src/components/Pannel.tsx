@@ -19,7 +19,6 @@ import { Tool } from "../types/tool.ts";
 type PannelProps = {
     is_shown: boolean
     toggle_off: () => void
-    clear_canvas: () => void
 }
 
 const Pannel = ({is_shown, toggle_off}: PannelProps) => {
