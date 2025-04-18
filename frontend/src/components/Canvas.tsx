@@ -7,7 +7,7 @@ import { CanvasMouseEvent } from '../types/events.ts'
 
 import { Fragment } from 'react/jsx-runtime';
 
-import { useRef, useEffect, RefObject } from 'react';
+import { useRef, RefObject } from 'react';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
@@ -17,50 +17,47 @@ const Canvas = () => {
     const { color, setColor } = useColor()
     const { tool } = useTool()
 
-    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, lines, shapes, setLines, setShapes} = useCanvas()
+    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, lines, shapes, setLines, setShapes} = useCanvas()
 
-    const isDrawing = useRef(false)
     const resize_animationFrameID = useRef<number | null>(null)
     const draw_line_animationFrameID = useRef<number | null>(null)
 
     type TempShape = Konva.Circle | Konva.Rect | Konva.Line
 
     const tempShape = useRef<TempShape | null>(null)
-
-    useEffect(() => {
-	console.log(shapes)
-    }, [shapes])
+    const tempLine = useRef<Konva.Line | null>(null)
 
     const start_draw = (event: CanvasMouseEvent) => {
-	isDrawing.current = true
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (pos) {
-	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y], color: color}])
+	    tempLine.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, strokeWidth: tool.name == 'brush' ? 5 : 2})
+	    tempLineLayerRef.current?.add(tempLine.current)
 	}
     }
 
-    const stop_draw = (event: CanvasMouseEvent) => {
-	isDrawing.current = false
-	const pos = event.target.getStage()?.getPointerPosition()
-	if (pos) {
-	    setLines([...lines, {tool: tool.name, points: [pos.x, pos.y], color: color}])
-	}
+    const stop_draw = (temp_line: RefObject<Konva.Line | null>) => {
+	const line = temp_line.current
+	if (!line) return
+
+	tempLineLayerRef.current?.destroyChildren()
+	setLines(prev => [...prev, {tool: tool.name, color: line.stroke(), points: line.points()}])
+	tempLine.current = null
     }
 
-    const draw = (event: CanvasMouseEvent) => {
+    const draw = (event: CanvasMouseEvent, temp_line: RefObject<Konva.Line | null>) => {
 	if (draw_line_animationFrameID.current) return
+
+	const line = temp_line.current
+	if (!line) return
 
 	draw_line_animationFrameID.current = requestAnimationFrame(() => {
 	    const point = event.target.getStage()?.getPointerPosition()
-	    if (point) {
-		let last_line = lines[lines.length - 1]
-		last_line.points = last_line.points.concat([point.x, point.y])
+	    if (!point) return
 
-		lines.splice(lines.length - 1, 1, last_line)
-		setLines(lines.concat())
+	    line.points([...line.points(), point.x, point.y])
+	    tempLineLayerRef.current?.batchDraw()
 
-		draw_line_animationFrameID.current = null
-	    }
+	    draw_line_animationFrameID.current = null
 	})
     }
 
@@ -198,8 +195,8 @@ const Canvas = () => {
     }
 
     const handle_mousemove = (event: CanvasMouseEvent) => {
-	if (isDrawing.current) {
-	    draw(event)
+	if (tempLine.current) {
+	    draw(event, tempLine)
 	}
 	else if (tempShape.current) {
 	    resize_shape_preview(event, tempShape)
@@ -207,8 +204,8 @@ const Canvas = () => {
     }
 
     const handle_mouseup = (event: CanvasMouseEvent) => {
-	if (isDrawing.current) {
-	    stop_draw(event)
+	if (tempLine.current) {
+	    stop_draw(tempLine)
 	} else if (tempShape) {
 	    commit_shape_preview(tempShape)
 	}
@@ -264,21 +261,15 @@ const Canvas = () => {
 			<Line
 			    points={line.points}
 			    stroke={line.color}
-			    strokeWidth={5}
-			    tension={0.5}
-			    lineCap='round'
-			    lineJoin='round'
 			    globalCompositeOperation={line.tool === 'eraser' ? 'destination-out' : 'source-over'}
 			/>
 			{line.tool == 'brush' &&
 			    <Line
 				points={line.points}
 				stroke={line.color}
-				strokeWidth={5 + 10}
+				strokeWidth={5}
 				opacity={0.8}
 				tension={0.5}
-				lineCap='round'
-				lineJoin='round'
 				globalCompositeOperation='source-over'
 			    />
 			}
@@ -336,6 +327,9 @@ const Canvas = () => {
 	    </Layer>
 
 	    <Layer ref={tempShapeLayerRef}>
+	    </Layer>
+
+	    <Layer ref={tempLineLayerRef}>
 	    </Layer>
 	</Stage>
     )

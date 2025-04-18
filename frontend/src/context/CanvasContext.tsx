@@ -14,6 +14,7 @@ type CanvasContextType = {
     linesLayerRef: RefObject<Konva.Layer | null>
     shapesLayerRef: RefObject<Konva.Layer | null>
     tempShapeLayerRef: RefObject<Konva.Layer | null>
+    tempLineLayerRef: RefObject<Konva.Layer | null>
     layers: RefObject<Konva.Layer | null>[]
 }
 
@@ -27,7 +28,8 @@ const CanvasProvider = ({children}: CanvasProviderProps) => {
     const linesLayerRef = useRef<Konva.Layer | null>(null)
     const shapesLayerRef = useRef<Konva.Layer | null>(null)
     const tempShapeLayerRef = useRef<Konva.Layer | null>(null)
-    const layers = [linesLayerRef, shapesLayerRef, tempShapeLayerRef]
+    const tempLineLayerRef = useRef<Konva.Layer | null>(null)
+    const layers = [linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef]
 
     const [lines, setLines] = useState<Stroke[]>([])
     const [shapes, setShapes] = useState<Shape[]>([])
@@ -54,6 +56,7 @@ const CanvasProvider = ({children}: CanvasProviderProps) => {
 		linesLayerRef,
 		shapesLayerRef,
 		tempShapeLayerRef,
+		tempLineLayerRef,
 		layers,
 	    }}
 	>
