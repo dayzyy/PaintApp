@@ -26,18 +26,39 @@ const Canvas = () => {
 
     const tempShape = useRef<TempShape | null>(null)
     const tempLine = useRef<Konva.Line | null>(null)
+    const tempSubLine = useRef<Konva.Line | null>(null)
 
     const isSelected = useRef<string | null>(null)
     const transformerRef = useRef<Konva.Transformer | null>(null)
 
     const start_draw = (event: CanvasMouseEvent) => {
 	const pos = event.target.getStage()?.getPointerPosition()
-	if (pos) {
+	if (!pos) return
+
+	if (tool.name == 'brush') {
 	    tempLine.current = new Konva.Line({
-		points: [pos.x, pos.y], stroke: color, strokeWidth: tool.name == 'brush' ? 5 : 2,
-		tension: 0.5, lineCap: 'round', lineJoin: 'round'
+		points: [pos.x, pos.y], stroke: color, strokeWidth: 6,
+		tension: 0.5, lineCap: 'round', lineJoin: 'round',
+		globalCompositeOperation: 'source-over'
+	    })
+
+	    tempSubLine.current = new Konva.Line({
+		points: [pos.x, pos.y], stroke: color, strokeWidth: 13,
+		tension: 0.5, opacity: 0.7, lineCap: 'round', lineJoin: 'round',
+		globalCompositeOperation: 'source-over'
 	    })
 	    tempLineLayerRef.current?.add(tempLine.current)
+	    tempLineLayerRef.current?.add(tempSubLine.current)
+	    tempLineLayerRef.current?.batchDraw()
+	} else {
+	    tempLine.current = new Konva.Line({
+		points: [pos.x, pos.y], stroke: color, strokeWidth: tool.name == 'eraser' ? 10 : 2,
+		tension: 0.5, lineCap: 'round', lineJoin: 'round',
+		globalCompositeOperation: tool.name == 'eraser' ? 'destination-out' : 'source-over'
+	    })
+	    const target_layer = tool.name == 'eraser' ? linesLayerRef : tempLineLayerRef
+	    target_layer.current?.add(tempLine.current)
+	    target_layer.current?.batchDraw()
 	}
     }
 
@@ -48,12 +69,14 @@ const Canvas = () => {
 	tempLineLayerRef.current?.destroyChildren()
 	setLines(prev => [...prev, {tool: tool.name, color: line.stroke(), points: line.points()}])
 	tempLine.current = null
+	tempSubLine.current = null
     }
 
-    const draw = (event: CanvasMouseEvent, temp_line: RefObject<Konva.Line | null>) => {
+    const draw = (event: CanvasMouseEvent, temp_line: RefObject<Konva.Line | null>, temp_sub_line: RefObject<Konva.Line | null>) => {
 	if (draw_line_animationFrameID.current) return
 
 	const line = temp_line.current
+	const sub_line = temp_sub_line.current
 	if (!line) return
 
 	draw_line_animationFrameID.current = requestAnimationFrame(() => {
@@ -61,6 +84,7 @@ const Canvas = () => {
 	    if (!point) return
 
 	    line.points([...line.points(), point.x, point.y])
+	    if (sub_line) sub_line.points([...sub_line.points(), point.x, point.y])
 	    tempLineLayerRef.current?.batchDraw()
 
 	    draw_line_animationFrameID.current = null
@@ -239,7 +263,7 @@ const Canvas = () => {
 
     const handle_mousemove = (event: CanvasMouseEvent) => {
 	if (tempLine.current) {
-	    draw(event, tempLine)
+	    draw(event, tempLine, tempSubLine)
 	}
 	else if (tempShape.current) {
 	    resize_shape_preview(event, tempShape)
@@ -297,7 +321,7 @@ const Canvas = () => {
 			<Line
 			    points={line.points}
 			    stroke={line.color}
-			    strokeWidth={2}
+			    strokeWidth={tool.name == 'brush' ? 6 : 2}
 			    tension={0.5}
 			    lineCap='round'
 			    lineJoin='round'
@@ -307,8 +331,8 @@ const Canvas = () => {
 			    <Line
 				points={line.points}
 				stroke={line.color}
-				strokeWidth={5}
-				opacity={0.8}
+				strokeWidth={13}
+				opacity={0.7}
 				tension={0.5}
 				lineCap='round'
 				lineJoin='round'
