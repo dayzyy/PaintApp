@@ -28,6 +28,7 @@
 	--color-bg-pannel: hsl(0, 0%, 95%);
 	--color-bg-mode: hsl(0, 0%, 90%);
 	--color-bg-alert: hsl(0, 0%, 93%);
+	--color-bg-tooltip: hsl(200, 50%, 85%);
 
 	--color-border-tool-active: hsl(0, 13%, 60%);
 
