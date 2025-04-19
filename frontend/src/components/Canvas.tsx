@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { Stage, Layer, Circle, Rect, Line } from 'react-konva';
+import { Stage, Layer, Circle, Rect, Line, Transformer } from 'react-konva';
 
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
 
@@ -7,7 +7,7 @@ import { CanvasMouseEvent } from '../types/events.ts'
 
 import { Fragment } from 'react/jsx-runtime';
 
-import { useState, useRef, RefObject } from 'react';
+import { useRef, RefObject } from 'react';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
@@ -28,6 +28,7 @@ const Canvas = () => {
     const tempLine = useRef<Konva.Line | null>(null)
 
     const isSelected = useRef<string | null>(null)
+    const transformerRef = useRef<Konva.Transformer | null>(null)
 
     const start_draw = (event: CanvasMouseEvent) => {
 	const pos = event.target.getStage()?.getPointerPosition()
@@ -190,6 +191,7 @@ const Canvas = () => {
 	    })
 	}
 	tempShapeLayerRef.current?.destroyChildren()
+	tempShapeLayerRef.current?.draw()
 	tempShape.current = null
 	resize_animationFrameID.current = null
     }
@@ -253,6 +255,8 @@ const Canvas = () => {
     }
 
     const handle_click = (event: CanvasMouseEvent) => {
+	const nodes = transformerRef.current?.nodes()
+	if (nodes && nodes.length != 0 && !nodes.includes(event.currentTarget)) transformerRef.current?.nodes([])
 	if (tool.name == 'pick') pick_color(event)
 	if (tool.name == 'fill') fill_shape(event)
     }
@@ -261,6 +265,12 @@ const Canvas = () => {
 	if (tool.name == 'select') {
 	    isSelected.current = id
 	}
+    }
+
+    const handle_shape_click = (event: CanvasMouseEvent) => {
+	event.cancelBubble = true
+	const target = event.currentTarget
+	transformerRef.current?.nodes([target])
     }
 
     const handle_drag_start = (event: CanvasMouseEvent, id: string) => {
@@ -329,7 +339,9 @@ const Canvas = () => {
 				    radius={circle.radius}
 				    onMouseDown={() => handle_select(circle.id)}
 				    onDragStart={(e) => handle_drag_start(e, circle.id)}
+				    onDragEnd={() => isSelected.current = null}
 				    draggable
+				    onClick={(e) => handle_shape_click(e)}
 				/>
 			    )
 			}
@@ -348,6 +360,8 @@ const Canvas = () => {
 				    height={rectangle.height}
 				    onMouseDown={() => handle_select(rectangle.id)}
 				    onDragStart={(e) => handle_drag_start(e, rectangle.id)}
+				    onDragEnd={() => isSelected.current = null}
+				    onClick={(e) => handle_shape_click(e)}
 				    draggable
 				/>
 			    )
@@ -364,12 +378,16 @@ const Canvas = () => {
 				    points={line.points}
 				    onMouseDown={() => handle_select(line.id)}
 				    onDragStart={(e) => handle_drag_start(e, line.id)}
+				    onDragEnd={() => isSelected.current = null}
+				    onClick={(e) => handle_shape_click(e)}
 				    draggable
 				/>
 			    )
 			}
 		    })
 		}
+
+		<Transformer ref={transformerRef}/>
 	    </Layer>
 	</Stage>
     )
