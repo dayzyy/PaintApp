@@ -9,7 +9,7 @@ import ToolBox from "./ToolBox.tsx"
 import PannelColumn from "./PannelColumn.tsx";
 import GhostBlock from "./GhostBlock.tsx";
 
-import { tools } from "../constants/tools";
+import { TOOLS } from "../constants/tools";
 import { useTool } from "../context/ToolContext.tsx";
 import { useColor } from "../context/ColorContext.tsx";
 import { useCanvas } from "../context/CanvasContext.tsx";
@@ -89,14 +89,14 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 	let jump = 2
 	let jumped = 0
 
-	while (jumped < tools.length) {
-	    sliced_tools.current = [...sliced_tools.current, tools.slice(jumped, jumped + jump)]
+	while (jumped < TOOLS.length) {
+	    sliced_tools.current = [...sliced_tools.current, TOOLS.slice(jumped, jumped + jump)]
 	    jumped += jump
 
 	    if (jump == 2) jump = 4
 	}
 
-	if (jumped < tools.length) sliced_tools.current = [...sliced_tools.current, tools.slice(jumped, tools.length)]
+	if (jumped < TOOLS.length) sliced_tools.current = [...sliced_tools.current, TOOLS.slice(jumped, TOOLS.length)]
     }
     split_tools()
 

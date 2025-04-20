@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react"
+import { ReactNode, RefObject, useEffect, useState } from "react"
 
 import { IoCloseOutline } from "react-icons/io5";
 
@@ -8,9 +8,10 @@ type AlertProps = {
     info: string
     toggle_off: () => void
     disable: () => void
+    reference: RefObject<HTMLButtonElement | null>
 }
 
-const Alert = ({icon, text, info, toggle_off, disable}: AlertProps) => {
+const Alert = ({icon, text, info, toggle_off, disable, reference}: AlertProps) => {
     const [show, setShow] = useState(false)
 
     useEffect(() => {
@@ -53,12 +54,12 @@ const Alert = ({icon, text, info, toggle_off, disable}: AlertProps) => {
 		    </div>
 		</div>
 
-		<div>
-		    <IoCloseOutline
-		    className="text-[3.5rem] text-[var(--color-text-alert-msg) cursor-pointer"
-			onClick={hide}
-		    />
-		</div>
+		<button
+		    onClick={hide}
+		    ref={reference}
+		>
+		    <IoCloseOutline className="text-[3.5rem] text-[var(--color-text-alert-msg) cursor-pointer"/>
+		</button>
 	    </div>
 
 	    <div className="h-full w-fit  flex-grow-0 self-end  bg-[var(--color-bg-alert)]  p-2 rounded-md  flex items-center  cursor-pointer">

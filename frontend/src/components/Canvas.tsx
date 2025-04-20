@@ -100,7 +100,7 @@ const Canvas = () => {
 	    tempShapeLayerRef.current?.add(tempShape.current)
 	    tempShapeLayerRef.current?.batchDraw()
 	}
-	else if (tool.name == 'square') {
+	else if (tool.name == 'rectangle') {
 	    const pos = event.target.getStage()?.getPointerPosition()
 	    if (!pos) return
 

@@ -11,7 +11,6 @@ const ToolBox = ({icon, selected, on_click}: ToolProps) => {
     const tooltipTiming = useRef<number | null>(null)
 
     const handle_hover = () => {
-	console.log('here')
 	tooltipTiming.current = setTimeout(() => setShowTooltip(true), 500)
     }
 
@@ -48,7 +47,7 @@ const ToolBox = ({icon, selected, on_click}: ToolProps) => {
 	    <div 
 		className={`tooltip  absolute -top-5  w-[5rem] h-[2rem]
 		    z-[1122]  bg-[var(--color-bg-tooltip)]
-		    rounded-xl items-center justify-center
+		    rounded-xl items-center justify-center font-bold
 		    ${showTooltip ? 'flex' : 'hidden'}`}
 	    >
 		<p className="">Alt + p</p>	    

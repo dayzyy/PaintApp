@@ -4,15 +4,14 @@ import { useTheme } from './components/Theme'
 import { useTool } from './context/ToolContext';
 import { useResolution } from './context/ResolutionContext.tsx';
 
-import { tools } from './constants/tools';
+import { TOOLS } from './constants/tools.tsx'
 
 import Pannel from './components/Pannel'
 import Alert from './components/Alert'
 import Canvas from './components/Canvas.tsx';
-import Konva from 'konva';
+import ShortcutListener from './components/ShortcutListener.tsx';
 
 import { FaExclamationCircle } from "react-icons/fa";
-import { SlCursorMove } from "react-icons/sl";
 
 const App = () => {
     const [theme, setTheme] = useTheme()
@@ -23,39 +22,25 @@ const App = () => {
     const [showAlert, setShowAlert] = useState(false)
     const [showPannel, setShowPannel] = useState(true)
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
+    const buttonRef = useRef<HTMLButtonElement | null>(null)
 
     const disable_alert = () => {
 	localStorage.setItem('alert-disabled', 'true')
 	setAlertDisabled(true)
     }
 
-    const toggle_pannel_off = () => {
-	setShowPannel(false)
-	setShowAlert(true)
-    }
-
     useEffect(() => {
-	const handle_keydown = (event: KeyboardEvent) => {
-	    if (event.altKey && event.key.toLowerCase() === 'a') {
-		event.preventDefault()
-		setShowPannel(prev => {
-		    if (prev) setShowAlert(true)
-		    else setShowAlert(false)
-		    return !prev
-		})
-	    }
-	    else if (event.key == 'Escape') {
-		setTool({name: 'select', icon: <SlCursorMove className="text-[1.4rem]"/>})
-	    }
+	if (!showPannel && !alertDisabled) {
+	    setShowAlert(true)
+	} else if (!alertDisabled) {
+	    buttonRef.current?.click()
 	}
-
-	document.addEventListener('keydown', handle_keydown)
-
-	return () => document.removeEventListener('keydown', handle_keydown)
-    }, [])
+    }, [showPannel])
 
     return (
 	<main className='w-screen h-screen  flex justify-center items-center'>
+	    <ShortcutListener toggle_pannel={() => setShowPannel(prev => !prev)}/>
+
 	    {!alertDisabled && showAlert &&
 		<Alert
 		    icon={<FaExclamationCircle className='text-[2.6rem] text-[var(--color-icon-alert)]'/>}
@@ -63,18 +48,19 @@ const App = () => {
 		    info='[Alt + A] to toggle'
 		    toggle_off={() => setShowAlert(false)}
     		    disable={disable_alert}
+		    reference={buttonRef}
 		/>
 	    }
 
 	    {mobileViewport && 
 		<div className='fixed top-3 left-3 [&_*]:!text-[2.3rem] opacity-30 z-[1121]'>
-		    {tools.find(t => t.name == tool.name)?.icon}
+		    {TOOLS.find(t => t.name == tool.name)?.icon}
 		</div>
 	    }
 
 	    <Pannel
 		is_shown={showPannel}
-		toggle_off={toggle_pannel_off}
+		toggle_off={() => setShowPannel(false)}
 	    />
 
 	    <Canvas/>
