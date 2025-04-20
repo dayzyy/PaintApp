@@ -24,9 +24,26 @@ const App = () => {
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
     const buttonRef = useRef<HTMLButtonElement | null>(null)
 
+    const [image, setImage] = useState<HTMLImageElement | null>(null)
+
     const disable_alert = () => {
 	localStorage.setItem('alert-disabled', 'true')
 	setAlertDisabled(true)
+    }
+
+    const handle_image_change = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const file = event.target.files?.[0]
+	if (!file) return
+
+	const reader = new FileReader()
+	reader.onload = () => {
+	    const img = new Image()
+	    img.src = reader.result as string
+	    img.onload = () => {
+		setImage(img)
+	    }
+	}
+	reader.readAsDataURL(file)
     }
 
     useEffect(() => {
@@ -36,6 +53,7 @@ const App = () => {
 	    buttonRef.current?.click()
 	}
     }, [showPannel])
+
 
     return (
 	<main className='w-screen h-screen  flex justify-center items-center'>
@@ -61,9 +79,10 @@ const App = () => {
 	    <Pannel
 		is_shown={showPannel}
 		toggle_off={() => setShowPannel(false)}
+		add_image={(event) => handle_image_change(event)}
 	    />
 
-	    <Canvas/>
+	    <Canvas image={image} setImage={setImage}/>
 	</main>
     )
 }

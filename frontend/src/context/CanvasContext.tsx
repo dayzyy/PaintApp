@@ -7,14 +7,17 @@ import { Shape } from "../types/shapes";
 type CanvasContextType = {
     shapes: Shape[]
     lines: Stroke[]
+    images: HTMLImageElement[]
     setShapes: React.Dispatch<React.SetStateAction<Shape[]>>
     setLines: React.Dispatch<React.SetStateAction<Stroke[]>>
+    setImages: React.Dispatch<React.SetStateAction<HTMLImageElement[]>>
     clear_canvas: () => void
 
     linesLayerRef: RefObject<Konva.Layer | null>
     shapesLayerRef: RefObject<Konva.Layer | null>
     tempShapeLayerRef: RefObject<Konva.Layer | null>
     tempLineLayerRef: RefObject<Konva.Layer | null>
+    imagesLayerRef: RefObject<Konva.Layer | null>
     layers: RefObject<Konva.Layer | null>[]
 }
 
@@ -29,10 +32,12 @@ const CanvasProvider = ({children}: CanvasProviderProps) => {
     const shapesLayerRef = useRef<Konva.Layer | null>(null)
     const tempShapeLayerRef = useRef<Konva.Layer | null>(null)
     const tempLineLayerRef = useRef<Konva.Layer | null>(null)
-    const layers = [linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef]
+    const imagesLayerRef = useRef<Konva.Layer | null>(null)
+    const layers = [linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef]
 
     const [lines, setLines] = useState<Stroke[]>([])
     const [shapes, setShapes] = useState<Shape[]>([])
+    const [images, setImages] = useState<HTMLImageElement[]>([])
 
     const clear_canvas = () => {
 	for (let layer of layers) {
@@ -50,13 +55,16 @@ const CanvasProvider = ({children}: CanvasProviderProps) => {
 	    value={{
 		shapes,
 		lines,
+		images,
 		setShapes,
 		setLines,
+		setImages,
 		clear_canvas,
 		linesLayerRef,
 		shapesLayerRef,
 		tempShapeLayerRef,
 		tempLineLayerRef,
+		imagesLayerRef,
 		layers,
 	    }}
 	>

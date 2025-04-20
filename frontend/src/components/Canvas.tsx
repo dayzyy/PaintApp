@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { Stage, Layer, Circle, Rect, Line, Transformer } from 'react-konva';
+import { Stage, Layer, Circle, Rect, Line, Transformer, Image } from 'react-konva';
 
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
 
@@ -7,17 +7,22 @@ import { CanvasMouseEvent } from '../types/events.ts'
 
 import { Fragment } from 'react/jsx-runtime';
 
-import { useRef, RefObject } from 'react';
+import { useRef, RefObject, useEffect, Dispatch, SetStateAction } from 'react';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
 import { useCanvas } from '../context/CanvasContext.tsx';
 
-const Canvas = () => {
+type CanvasProps = {
+    image: HTMLImageElement | null
+    setImage: Dispatch<SetStateAction<HTMLImageElement | null>>
+}
+
+const Canvas = ({image, setImage}: CanvasProps) => {
     const { color, setColor } = useColor()
     const { tool } = useTool()
 
-    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, lines, shapes, setLines, setShapes} = useCanvas()
+    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, lines, shapes, images, setLines, setShapes, setImages} = useCanvas()
 
     const resize_animationFrameID = useRef<number | null>(null)
     const draw_line_animationFrameID = useRef<number | null>(null)
@@ -303,6 +308,19 @@ const Canvas = () => {
 	}
     }
 
+    useEffect(() => {
+	if (!image) return
+	
+	const img = new window.Image()
+	img.src = image.src
+
+	img.onload = () => {
+	    setImages(prev => [...prev, img])
+	}
+
+	setImage(null)
+    }, [image])
+
     return ( 
 	<Stage
 	    width={window.innerWidth}
@@ -315,6 +333,26 @@ const Canvas = () => {
 	    onTouchMove={draw}
 	    onClick={handle_click}
 	>
+	    <Layer ref={imagesLayerRef}>
+		{images.map((img, index) => {
+		    return (
+			<Image
+			    key={index}
+			    x={50}
+			    y={50}
+			    image={img}
+			    width={300}
+			    height={(img.height / img.width) * 300}
+			    onMouseDown={() => handle_select(img.src)}
+			    onDragStart={(e) => handle_drag_start(e, img.src)}
+			    onDragEnd={() => isSelected.current = null}
+			    onClick={(e) => handle_shape_click(e)}
+			    draggable
+			/>
+		    )
+		})}
+	    </Layer>
+
 	    <Layer ref={linesLayerRef}>
 		{lines.map((line, index) => {
 		    return (<Fragment key={index}>

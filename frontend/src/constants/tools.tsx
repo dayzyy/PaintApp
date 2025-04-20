@@ -8,7 +8,6 @@ import { LuPaintbrushVertical } from "react-icons/lu";
 import { FaFillDrip } from "react-icons/fa6";
 import { TfiLayoutLineSolid } from "react-icons/tfi";
 import { MdOutlineTextFields } from "react-icons/md";
-import { RiImageAddFill } from "react-icons/ri";
 import { CiPickerHalf } from "react-icons/ci";
 import { SlCursorMove } from "react-icons/sl";
 
@@ -23,7 +22,6 @@ const TOOLS: Tool[] = [
     {name: 'rectangle', icon: <FaRegSquareFull className="text-[1.2rem]"/>},
     {name: 'line', icon: <TfiLayoutLineSolid className="text-[1.5rem]"/>},
     {name: 'text', icon: <MdOutlineTextFields className="text-[1.4rem]"/>},
-    {name: 'image', icon: <RiImageAddFill className="text-[1.4rem]"/>},
 ]
 
 export { TOOLS }

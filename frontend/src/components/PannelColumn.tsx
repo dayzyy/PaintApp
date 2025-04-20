@@ -26,7 +26,7 @@ const PannelColumn = ({block, show, tools}: PannelColumnProps) => {
 	    {
 		tools.map((t, index) => {
 		    return (
-			<ToolBox key={index} icon={t.icon} selected={t.name == tool.name} on_click={() => setTool(t)}/>
+			<ToolBox key={index} tool={t} selected={t.name == tool.name} on_click={() => setTool(t)}/>
 		    )
 		})
 	    }

@@ -1,9 +1,11 @@
+import React from "react";
 import { useResolution } from "../context/ResolutionContext";
-import { useEffect, useRef, useState } from "react";
+import { RefObject, useEffect, useRef, useState } from "react";
 
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { IoMdClose } from "react-icons/io";
 import { RiResetLeftLine } from "react-icons/ri";
+import { RiImageAddFill } from "react-icons/ri";
 
 import ToolBox from "./ToolBox.tsx"
 import PannelColumn from "./PannelColumn.tsx";
@@ -19,9 +21,10 @@ import { Tool } from "../types/tool.ts";
 type PannelProps = {
     is_shown: boolean
     toggle_off: () => void
+    add_image: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-const Pannel = ({is_shown, toggle_off}: PannelProps) => {
+const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
     const { color, setColor } = useColor()
     const { clear_canvas } = useCanvas()
 
@@ -106,7 +109,7 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 	    id='pannel'
 	    className={`fixed bottom-0   w-screen  py-2  rounded-xl  bg-[var(--color-bg-pannel)]  flex flex-col z-[1121]
 		md:flex-row md:bottom-auto md:left-0 md:w-[4.3rem]
-		${mobileViewport ? (extend ? 'h-[12.9rem]' : 'h-[4.3rem]') : (extend ? '!w-[12.9rem]' : 'w-[4.3rem]')}
+		${mobileViewport ? (extend ? 'h-[17.2rem]' : 'h-[4.3rem]') : (extend ? '!w-[17.2rem]' : 'w-[4.3rem]')}
 		${mobileViewport ? (!is_shown ? 'translate-y-[200%]' : 'translate-y-0') : (!is_shown ? '-translate-x-[200%]' : 'translate-x-0')}`}
 	>
 	    <div className="h-[4.3rem] md:h-fit md:w-[4.3rem] flex md:flex-col md:gap-8 items-center justify-around">
@@ -120,7 +123,7 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 		{
 		    sliced_tools.current[0].map((t, index) => {
 			return (
-			    <ToolBox key={index} icon={t.icon} selected={t.name == tool.name} on_click={() => setTool(t)}/>
+			    <ToolBox key={index} tool={t} selected={t.name == tool.name} on_click={() => setTool(t)}/>
 			)
 		    })
 		}
@@ -158,8 +161,25 @@ const Pannel = ({is_shown, toggle_off}: PannelProps) => {
 
 	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[1]}/>}
 	    {isToggled && <PannelColumn block={blockContent} show={showContent} tools={sliced_tools.current[2]}/>}
+
+	    {isToggled && 
+		<div className={`h-[4.3rem] md:h-fit md:w-[4.3rem] flex md:flex-col md:gap-8 items-center justify-around
+		    [&_*]:transition-[opacity] [&_*]:duration-100
+		    ${blockContent ? '' : '[&_*]:hidden'}
+		    ${showContent ? '[&_*]:opacity-100' : '[&_*]:opacity-0'}`}>
+
+		    <GhostBlock>{null}</GhostBlock>
+
+		    <GhostBlock>
+			<div className="relative w-[3rem] h-[3rem]  bg-[var(--color-bg-mode)] rounded-xl  grid place-items-center">
+			    <RiImageAddFill className="text-[1.4rem]"/>
+			    <input onChange={(e) => add_image(e)} type="file" className="absolute w-full h-full !opacity-0 cursor-pointer"/>
+			</div>
+		    </GhostBlock>
+		</div>
+	    }
 	</div>
     )
-    }
+}
 
 export default Pannel

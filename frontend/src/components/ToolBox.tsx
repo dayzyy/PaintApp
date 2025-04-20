@@ -1,12 +1,14 @@
-import { ReactNode, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { SHORTCUTS } from "./ShortcutListener"
+import { Tool } from "../types/tool"
 
 type ToolProps = {
-    icon: ReactNode
+    tool: Tool
     selected: boolean
     on_click: (() => void)
 }
 
-const ToolBox = ({icon, selected, on_click}: ToolProps) => {
+const ToolBox = ({tool, selected, on_click}: ToolProps) => {
     const [showTooltip, setShowTooltip]  = useState<boolean>(false)
     const tooltipTiming = useRef<number | null>(null)
 
@@ -29,6 +31,8 @@ const ToolBox = ({icon, selected, on_click}: ToolProps) => {
 	}
     }, [])
 
+    const action = Object.values(SHORTCUTS).find(action => action.destination == tool.name)
+
     return (
 	<div 
 	    className="toolbox relative"
@@ -41,17 +45,19 @@ const ToolBox = ({icon, selected, on_click}: ToolProps) => {
 		    ${selected ? 'border-2 border-[var(--color-border-tool-active)]' : ''}`}
 		onClick={on_click}
 	    >
-		{icon}	
+		{tool.icon}
 	    </div>
 
-	    <div 
-		className={`tooltip  absolute -top-5  w-[5rem] h-[2rem]
-		    z-[1122]  bg-[var(--color-bg-tooltip)]
-		    rounded-xl items-center justify-center font-bold
-		    ${showTooltip ? 'flex' : 'hidden'}`}
-	    >
-		<p className="">Alt + p</p>	    
-	    </div>
+	    { action &&
+		<div 
+		    className={`tooltip  absolute -top-5  w-[5rem] h-[2rem]
+			z-[1122]  bg-[var(--color-bg-tooltip)]
+			rounded-xl items-center justify-center font-bold
+			${showTooltip ? 'flex' : 'hidden'}`}
+		>
+		    <p>{action.alias}</p>
+		</div>
+	    }
 	</div>
     )
 }
