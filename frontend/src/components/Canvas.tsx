@@ -4,6 +4,7 @@ import { Stage, Layer, Circle, Rect, Line, Transformer, Image } from 'react-konv
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
 
 import { CanvasMouseEvent } from '../types/events.ts'
+import { ImageObj } from '../types/image.ts';
 
 import { Fragment } from 'react/jsx-runtime';
 
@@ -315,7 +316,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	img.src = image.src
 
 	img.onload = () => {
-	    setImages(prev => [...prev, img])
+	    setImages(prev => [...prev, new ImageObj(image)])
 	}
 
 	setImage(null)
@@ -334,17 +335,17 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	    onClick={handle_click}
 	>
 	    <Layer ref={imagesLayerRef}>
-		{images.map((img, index) => {
+		{images.map((img) => {
 		    return (
 			<Image
-			    key={index}
-			    x={50}
-			    y={50}
-			    image={img}
-			    width={300}
-			    height={(img.height / img.width) * 300}
-			    onMouseDown={() => handle_select(img.src)}
-			    onDragStart={(e) => handle_drag_start(e, img.src)}
+			    key={img.id}
+			    x={img.x}
+			    y={img.y}
+			    image={img.reference}
+			    width={img.width}
+			    height={img.height}
+			    onMouseDown={() => handle_select(img.reference.src)}
+			    onDragStart={(e) => handle_drag_start(e, img.reference.src)}
 			    onDragEnd={() => isSelected.current = null}
 			    onClick={(e) => handle_shape_click(e)}
 			    draggable

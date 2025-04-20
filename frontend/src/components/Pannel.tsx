@@ -172,7 +172,7 @@ const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
 
 		    <GhostBlock>
 			<div className="relative w-[3rem] h-[3rem]  bg-[var(--color-bg-mode)] rounded-xl  grid place-items-center">
-			    <RiImageAddFill className="text-[1.4rem]"/>
+			    <RiImageAddFill className="text-[1.5rem] text-[var(--color-icon-mode)]"/>
 			    <input onChange={(e) => add_image(e)} type="file" className="absolute w-full h-full !opacity-0 cursor-pointer"/>
 			</div>
 		    </GhostBlock>

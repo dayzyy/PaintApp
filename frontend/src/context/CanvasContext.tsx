@@ -3,14 +3,15 @@ import Konva from "konva";
 import { createContext, ReactNode, useContext, useState, useRef, RefObject } from "react";
 import { Stroke } from "../types/stroke";
 import { Shape } from "../types/shapes";
+import { ImageObj } from "../types/image";
 
 type CanvasContextType = {
     shapes: Shape[]
     lines: Stroke[]
-    images: HTMLImageElement[]
+    images: ImageObj[]
     setShapes: React.Dispatch<React.SetStateAction<Shape[]>>
     setLines: React.Dispatch<React.SetStateAction<Stroke[]>>
-    setImages: React.Dispatch<React.SetStateAction<HTMLImageElement[]>>
+    setImages: React.Dispatch<React.SetStateAction<ImageObj[]>>
     clear_canvas: () => void
 
     linesLayerRef: RefObject<Konva.Layer | null>
@@ -37,7 +38,7 @@ const CanvasProvider = ({children}: CanvasProviderProps) => {
 
     const [lines, setLines] = useState<Stroke[]>([])
     const [shapes, setShapes] = useState<Shape[]>([])
-    const [images, setImages] = useState<HTMLImageElement[]>([])
+    const [images, setImages] = useState<ImageObj[]>([])
 
     const clear_canvas = () => {
 	for (let layer of layers) {
