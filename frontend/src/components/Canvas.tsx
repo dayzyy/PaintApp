@@ -1,7 +1,8 @@
 import Konva from 'konva';
-import { Stage, Layer, Circle, Rect, Line, Transformer, Image } from 'react-konva';
+import { Stage, Layer, Circle, Rect, Line, Transformer, Image, Text } from 'react-konva';
 
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
+import { TextBox } from '../types/textbox.ts';
 
 import { CanvasMouseEvent } from '../types/events.ts'
 import { ImageObj } from '../types/image.ts';
@@ -23,7 +24,8 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const { color, setColor } = useColor()
     const { tool } = useTool()
 
-    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, lines, shapes, images, setLines, setShapes, setImages} = useCanvas()
+    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, textsLayerRef,
+	   lines, shapes, images, texts, setLines, setShapes, setImages, setTexts} = useCanvas()
 
     const resize_animationFrameID = useRef<number | null>(null)
     const draw_line_animationFrameID = useRef<number | null>(null)
@@ -36,6 +38,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
     const isSelected = useRef<string | null>(null)
     const transformerRef = useRef<Konva.Transformer | null>(null)
+    const editingText = useRef<TextBox | null>(null)
 
     const start_draw = (event: CanvasMouseEvent) => {
 	const pos = event.target.getStage()?.getPointerPosition()
@@ -259,6 +262,19 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const fill_shape = (event: CanvasMouseEvent) => {
     }
 
+    const add_textbox = (event: CanvasMouseEvent) => {
+	const pos = event.target.getStage()?.getPointerPosition()
+
+	if (pos) {
+	    setTexts((prev) => [...prev, new TextBox(pos.x, pos.y)])
+	}
+    }
+
+    const handle_edit_textbox = (event: CanvasMouseEvent, textbox: TextBox) => {
+	textbox.turn_editable()
+	editingText.current = textbox
+    }
+
     const handle_mousedown = (event: CanvasMouseEvent) => {
 	if (tool.name == 'pen' || tool.name == 'eraser' || tool.name == 'brush') {
 	    start_draw(event)
@@ -287,8 +303,22 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const handle_click = (event: CanvasMouseEvent) => {
 	const nodes = transformerRef.current?.nodes()
 	if (nodes && nodes.length != 0 && !nodes.includes(event.currentTarget)) transformerRef.current?.nodes([])
-	if (tool.name == 'pick') pick_color(event)
-	if (tool.name == 'fill') fill_shape(event)
+
+	if (editingText.current) {
+	    editingText.current.delete()
+	    editingText.current = null
+	} 
+	if (tool.name == 'text') {
+	    add_textbox(event)
+	    return
+	}
+	if (tool.name == 'pick') {
+	    pick_color(event)
+	    return
+	}
+	if (tool.name == 'fill') {
+	    fill_shape(event)
+	}
     }
 
     const handle_select = (id: string) => {
@@ -334,6 +364,34 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	    onTouchMove={draw}
 	    onClick={handle_click}
 	>
+	    <Layer ref={textsLayerRef}>
+		{texts.map((text) => {
+		    return (
+			<Text
+			    key={text.id}
+			    ref={text.assign_node}
+			    x={text.x}
+			    y={text.y}
+			    text={text.text}
+			    width={100}
+			    height={30}
+			    fontSize={text.fontSize}
+			    fontFamily='Nunito'
+			    padding={5}
+
+			    onMouseDown={() => handle_select(text.id)}
+			    onDragStart={(e) => handle_drag_start(e, text.id)}
+			    onDragEnd={() => isSelected.current = null}
+			    onClick={(e) => handle_shape_click(e)}
+			    draggable
+			    onDblClick={(e) => handle_edit_textbox(e, text)}
+
+			    onTransformEnd={() => text.handle_resize()}
+			/>
+		    )
+		})}
+	    </Layer>
+
 	    <Layer ref={imagesLayerRef}>
 		{images.map((img) => {
 		    return (
@@ -450,7 +508,20 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    })
 		}
 
-		<Transformer ref={transformerRef}/>
+		<Transformer
+		    ref={transformerRef} 
+		    onTransform={(e) => {
+			    const node = e.target
+			    const scaleX = node.scaleX()
+			    const scaleY = node.scaleY()
+
+			    node.width(node.width() * scaleX)
+			    node.height(node.height() * scaleY)
+
+			    node.scaleX(1)
+			    node.scaleY(1)
+		    }}
+		/>
 	    </Layer>
 	</Stage>
     )
