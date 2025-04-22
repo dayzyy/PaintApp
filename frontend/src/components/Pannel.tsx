@@ -1,6 +1,7 @@
 import React from "react";
 import { useResolution } from "../context/ResolutionContext";
-import { RefObject, useEffect, useRef, useState } from "react";
+import { useCanvasLayers } from "../context/CanvasLayersContext.tsx";
+import { useEffect, useRef, useState } from "react";
 
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { IoMdClose } from "react-icons/io";
@@ -14,9 +15,9 @@ import GhostBlock from "./GhostBlock.tsx";
 import { TOOLS } from "../constants/tools";
 import { useTool } from "../context/ToolContext.tsx";
 import { useColor } from "../context/ColorContext.tsx";
-import { useCanvas } from "../context/CanvasContext.tsx";
 
 import { Tool } from "../types/tool.ts";
+import { useCanvasNodes } from "../context/CanvasNodesContext.tsx";
 
 type PannelProps = {
     is_shown: boolean
@@ -26,7 +27,8 @@ type PannelProps = {
 
 const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
     const { color, setColor } = useColor()
-    const { clear_canvas } = useCanvas()
+    const { layers } = useCanvasLayers()
+    const { setShapes, setLines, setImages, setTexts } = useCanvasNodes()
 
     const {tool, setTool} = useTool()
     const sliced_tools = useRef<Tool[][]>([])
@@ -86,6 +88,16 @@ const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
 
     const hide_pannel = () => {
 	toggle_off()
+    }
+
+    const clear_canvas = () => {
+	for (let layer of layers) {
+	    layer.current?.destroyChildren()
+	}
+	setShapes([])
+	setLines([])
+	setImages([])
+	setTexts([])
     }
 
     const split_tools = () => {

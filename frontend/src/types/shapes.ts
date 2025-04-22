@@ -1,3 +1,5 @@
+import Konva from "konva"
+
 type ShapeType = 'circle' | 'rectangle' | 'line'
 
 abstract class Shape  {
@@ -8,6 +10,7 @@ abstract class Shape  {
     stroke_color: string | CanvasGradient
     draggable: boolean = true
     fill?: string
+    node?: Konva.Shape
 
     constructor(x: number, y: number, stroke_color: string | CanvasGradient) {
 	this.x = x
@@ -23,6 +26,12 @@ class CircleObj extends Shape  {
     constructor(x: number, y: number, stroke_color: string | CanvasGradient, radius: number) {
 	super(x, y, stroke_color)
 	this.radius = radius
+    }
+
+    assign_node = (KonvaCircleNode: Konva.Circle) => {
+	if (KonvaCircleNode) {
+	    this.node = KonvaCircleNode
+	}
     }
 }
 
@@ -40,6 +49,12 @@ class RectangleObj extends Shape {
 	this.width = width
 	this.height = height
     }
+
+    assign_node = (KonvaCircleNode: Konva.Rect) => {
+	if (KonvaCircleNode) {
+	    this.node = KonvaCircleNode
+	}
+    }
 }
 
 class LineObj extends Shape {
@@ -49,6 +64,12 @@ class LineObj extends Shape {
     constructor(x: number, y: number, stroke_color: string | CanvasGradient, points: number[]) {
 	super(x, y, stroke_color)
 	this.points = points
+    }
+
+    assign_node = (KonvaCircleNode: Konva.Line) => {
+	if (KonvaCircleNode) {
+	    this.node = KonvaCircleNode
+	}
     }
 }
 

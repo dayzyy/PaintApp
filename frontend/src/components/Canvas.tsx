@@ -13,7 +13,9 @@ import { useRef, RefObject, useEffect, Dispatch, SetStateAction } from 'react';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
-import { useCanvas } from '../context/CanvasContext.tsx';
+import { useCanvasLayers } from '../context/CanvasLayersContext.tsx';
+import { useCanvasNodes } from '../context/CanvasNodesContext.tsx';
+import { useTransformer } from '../context/TransformerContext.tsx';
 
 type CanvasProps = {
     image: HTMLImageElement | null
@@ -24,8 +26,8 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const { color, setColor } = useColor()
     const { tool } = useTool()
 
-    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, textsLayerRef,
-	   lines, shapes, images, texts, setLines, setShapes, setImages, setTexts} = useCanvas()
+    const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, textsLayerRef} = useCanvasLayers()
+    const {shapes, lines, images, texts, setShapes, setLines, setImages, setTexts} = useCanvasNodes()
 
     const resize_animationFrameID = useRef<number | null>(null)
     const draw_line_animationFrameID = useRef<number | null>(null)
@@ -37,7 +39,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const tempSubLine = useRef<Konva.Line | null>(null)
 
     const isSelected = useRef<string | null>(null)
-    const transformerRef = useRef<Konva.Transformer | null>(null)
+    const {transformerRef} = useTransformer()
     const editingText = useRef<TextBox | null>(null)
 
     const start_draw = (event: CanvasMouseEvent) => {
@@ -397,6 +399,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    return (
 			<Image
 			    key={img.id}
+			    ref={img.assign_node}
 			    x={img.x}
 			    y={img.y}
 			    image={img.reference}
@@ -454,6 +457,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    return (
 				<Circle 
 				    key={circle.id}
+				    ref={circle.assign_node}
 				    x={circle.x}
 				    y={circle.y}
 				    stroke={circle.stroke_color}
@@ -472,6 +476,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    return (
 				<Rect
 				    key={rectangle.id}
+				    ref={rectangle.assign_node}
 				    x={rectangle.x}
 				    y={rectangle.y}
 				    scaleX={rectangle.dx}
@@ -493,6 +498,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    return (
 				<Line
 				    key={line.id}
+				    ref={line.assign_node}
 				    x={line.x}
 				    y={line.y}
 				    stroke={line.stroke_color}
@@ -509,7 +515,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		}
 
 		<Transformer
-		    ref={transformerRef} 
+		    ref={transformerRef}
 		    onTransform={(e) => {
 			    const node = e.target
 			    const scaleX = node.scaleX()

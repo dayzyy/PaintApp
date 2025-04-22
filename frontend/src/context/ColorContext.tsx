@@ -7,11 +7,7 @@ type ColorContextType = {
 
 const ColorContext = createContext<ColorContextType | null>(null)
 
-type ColorProviderProps = {
-    children: ReactNode
-}
-
-const ColorProvider = ({children}: ColorProviderProps) => {
+const ColorProvider = ({children}: {children: ReactNode}) => {
     const [color, setColor] = useState('#000')
     
     return (
@@ -25,7 +21,7 @@ const useColor = () => {
     const context = useContext(ColorContext)
 
     if (!context) {
-	throw new Error('useTool must be use within a ToolProvider')
+	throw new Error('useColor must be use within a ColorProvider')
     } else {
 	return context
     }

@@ -1,18 +1,22 @@
 import { useEffect } from "react"
-import { useTool } from "../context/ToolContext"
+import Konva from "konva"
 
 import { TOOLS } from "../constants/tools"
 import { ToolName } from "../types/tool"
+
+import { useTool } from "../context/ToolContext"
+import { useCanvasNodes } from "../context/CanvasNodesContext"
+import { useTransformer } from "../context/TransformerContext"
 
 type ShortcutListenerProps = {
     toggle_pannel: () => void
 }
 
 type KeyStroke = 'A' | 'Escape' | 'U' | 'E' | 'B' | 'G' | 'I' | 'O' |
-		 'R' | 'L' | 'T'
+		 'R' | 'L' | 'T' | 'Delete' | 'Backspace'
 
 type Destination = 'pannel' | 'select' |  'pen' | 'eraser' | 'brush' | 'fill' |
-		   'pick' | 'circle' | 'rectangle' | 'line' | 'text'
+		   'pick' | 'circle' | 'rectangle' | 'line' | 'text' | 'node'
 
 type Action = {
     alias: string
@@ -26,10 +30,26 @@ const SHORTCUTS: ShortcutMap = {} as ShortcutMap
 
 const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const { setTool } = useTool()
+    const { setShapes, setImages } = useCanvasNodes()
+    const {transformerRef} = useTransformer()
 
     const set_tool = (tool_name: ToolName) => {
 	const new_tool = TOOLS.find((tool) => tool.name == tool_name)
 	if (new_tool) setTool(new_tool)
+    }
+
+    const delete_node = () => {
+	if (!transformerRef.current || transformerRef.current.nodes().length == 0) return
+	let selectedNode = transformerRef.current.nodes()[0]
+
+	if (selectedNode instanceof Konva.Image) {
+	    setImages(prev => prev.filter((image) => image.node != selectedNode))
+	}
+	else if (selectedNode instanceof Konva.Shape) {
+	    setShapes(prev => prev.filter((shape) => shape.node != selectedNode))
+	}
+
+	transformerRef.current.nodes([])
     }
 
     const isKeyStroke = (key: string): key is KeyStroke => {
@@ -48,6 +68,8 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	SHORTCUTS['R'] = { alias: 'Alt + r', destination: 'rectangle', fire: () => set_tool('rectangle') }
 	SHORTCUTS['L'] = { alias: 'Alt + l', destination: 'line', fire: () => set_tool('line') }
 	SHORTCUTS['T'] = { alias: 'Alt + t', destination: 'text', fire: () => set_tool('text') }
+	SHORTCUTS['Delete'] = { alias: 'Del', destination: 'node', fire: () => delete_node()}
+	SHORTCUTS['Backspace'] = { alias: 'Back', destination: 'node', fire: () => delete_node()}
     }, [])
 
     useEffect(() => {
@@ -55,6 +77,10 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	    if (event.key == 'Escape') {
 		event.preventDefault()
 		SHORTCUTS['Escape'].fire()
+		return
+	    } else if (event.key == 'Delete' || event.key == 'Backspace') {
+		event.preventDefault()
+		SHORTCUTS['Delete'].fire()
 		return
 	    }
 

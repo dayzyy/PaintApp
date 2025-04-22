@@ -6,11 +6,7 @@ type ResolutionContextType = {
 
 const ResolutionContext = createContext<ResolutionContextType | null>(null)
 
-type ResolutionProviderProps = {
-    children: ReactNode
-}
-
-const ResolutionProvider = ({children}: ResolutionProviderProps) => {
+const ResolutionProvider = ({children}: {children: ReactNode}) => {
     const [mobileViewport, setMobileViewport] = useState(window.innerWidth < 768)
 
     useEffect(() => {

@@ -9,13 +9,9 @@ type ToolContextType = {
     setTool: (t: Tool) => void
 }
 
-type ToolProviderProps = {
-    children: ReactNode
-}
-
 const ToolContext = createContext<ToolContextType | null>(null)
 
-const ToolProvider = ({children}: ToolProviderProps) => {
+const ToolProvider = ({children}: {children: ReactNode}) => {
     const [tool, setTool] = useState<Tool>({name: 'pen', icon: <FaPenAlt/>})
 
     const force_cursor_update = () => {
