@@ -2,6 +2,7 @@ import Konva from 'konva';
 import { Stage, Layer, Circle, Rect, Line, Transformer, Image, Text } from 'react-konva';
 
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
+import { Stroke } from '../types/stroke.ts';
 import { TextBox } from '../types/textbox.ts';
 
 import { CanvasMouseEvent } from '../types/events.ts'
@@ -16,6 +17,7 @@ import { useTool } from '../context/ToolContext';
 import { useCanvasLayers } from '../context/CanvasLayersContext.tsx';
 import { useCanvasNodes } from '../context/CanvasNodesContext.tsx';
 import { useTransformer } from '../context/TransformerContext.tsx';
+import { useHistory } from '../context/HistoryContext.tsx';
 
 type CanvasProps = {
     image: HTMLImageElement | null
@@ -41,6 +43,8 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const isSelected = useRef<string | null>(null)
     const {transformerRef} = useTransformer()
     const editingText = useRef<TextBox | null>(null)
+
+    const {history} = useHistory()
 
     const start_draw = (event: CanvasMouseEvent) => {
 	const pos = event.target.getStage()?.getPointerPosition()
@@ -77,8 +81,16 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	const line = temp_line.current
 	if (!line) return
 
+	if (tool.name == 'eraser') {
+	    line.destroy()
+	    linesLayerRef.current?.batchDraw()
+	}
 	tempLineLayerRef.current?.destroyChildren()
-	setLines(prev => [...prev, {tool: tool.name, color: line.stroke(), points: line.points()}])
+
+	const new_line = new Stroke(tool.name, line.stroke(), line.points())
+	setLines(prev => [...prev, new_line])
+	history.current.push(() => setLines(prev => prev.filter((line) => line.id != new_line.id)))
+
 	tempLine.current = null
 	tempSubLine.current = null
     }
@@ -178,52 +190,19 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	if (!shape) return
 
 	if (shape instanceof Konva.Circle) {
-	    setShapes((prev: Shape[]): Shape[] => {
-		return (
-		    [
-			...prev,
-			new CircleObj(
-			    shape.x(),
-			    shape.y(),
-			    shape.stroke(),
-			    shape.radius()
-			)
-		    ]
-		)
-	    })
+	    const circle = new CircleObj(shape.x(), shape.y(), shape.stroke(), shape.radius())
+	    setShapes((prev: Shape[]): Shape[] => [...prev, circle])
+	    history.current.push(() => setShapes(prev => prev.filter(c => c.id != circle.id)))
 	}
 	else if (shape instanceof Konva.Rect) {
-	    setShapes((prev: Shape[]): Shape[] => {
-		return (
-		    [
-			...prev,
-			new RectangleObj(
-			    shape.x(),
-			    shape.y(),
-			    shape.scaleX(),
-			    shape.scaleY(),
-			    shape.stroke(),
-			    shape.width(),
-			    shape.height()
-			)
-		    ]
-		)
-	    })
+	    const rect = new RectangleObj(shape.x(), shape.y(), shape.scaleX(), shape.scaleY(), shape.stroke(), shape.width(), shape.height())
+	    setShapes((prev: Shape[]): Shape[] => [...prev, rect])
+	    history.current.push(() => setShapes(prev => prev.filter(r => r.id != rect.id)))
 	}
 	else if (shape instanceof Konva.Line) {
-	    setShapes((prev: Shape[]): Shape[] => {
-		return (
-		    [
-			...prev,
-			new LineObj(
-			    shape.x(),
-			    shape.y(),
-			    shape.stroke(),
-			    shape.points()
-			)
-		    ]
-		)
-	    })
+	    const line = new LineObj(shape.x(), shape.y(), shape.stroke(), shape.points())
+	    setShapes((prev: Shape[]): Shape[] => [...prev, line])
+	    history.current.push(() => setShapes(prev => prev.filter(l => l.id != line.id)))
 	}
 	tempShapeLayerRef.current?.destroyChildren()
 	tempShapeLayerRef.current?.draw()
@@ -268,7 +247,9 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	const pos = event.target.getStage()?.getPointerPosition()
 
 	if (pos) {
-	    setTexts((prev) => [...prev, new TextBox(pos.x, pos.y)])
+	    const textbox = new TextBox(pos.x, pos.y)
+	    setTexts((prev) => [...prev, textbox])
+	    history.current.push(() => setTexts(prev => prev.filter(t => t.id != textbox.id)))
 	}
     }
 
@@ -348,7 +329,9 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	img.src = image.src
 
 	img.onload = () => {
-	    setImages(prev => [...prev, new ImageObj(image)])
+	    const new_image = new ImageObj(image)
+	    setImages(prev => [...prev, new_image])
+	    history.current.push(() => setImages(prev => prev.filter(i => i.id != new_image.id)))
 	}
 
 	setImage(null)
@@ -421,7 +404,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			<Line
 			    points={line.points}
 			    stroke={line.color}
-			    strokeWidth={tool.name == 'brush' ? 6 : 2}
+			    strokeWidth={line.tool == 'eraser' ? 10 : (line.tool == 'brush' ? 6 : 2)}
 			    tension={0.5}
 			    lineCap='round'
 			    lineJoin='round'

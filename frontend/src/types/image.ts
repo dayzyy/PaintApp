@@ -2,8 +2,8 @@ import Konva from "konva"
 
 class ImageObj {
     id: string = crypto.randomUUID()
-    x: number = 500
-    y: number = 500
+    x: number = 200
+    y: number = 200
     width: number = 300
     height: number
     reference: HTMLImageElement

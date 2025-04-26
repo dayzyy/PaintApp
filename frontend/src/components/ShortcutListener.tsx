@@ -7,16 +7,17 @@ import { ToolName } from "../types/tool"
 import { useTool } from "../context/ToolContext"
 import { useCanvasNodes } from "../context/CanvasNodesContext"
 import { useTransformer } from "../context/TransformerContext"
+import { useHistory } from "../context/HistoryContext"
 
 type ShortcutListenerProps = {
     toggle_pannel: () => void
 }
 
 type KeyStroke = 'A' | 'Escape' | 'U' | 'E' | 'B' | 'G' | 'I' | 'O' |
-		 'R' | 'L' | 'T' | 'Delete' | 'Backspace'
+		 'R' | 'L' | 'T' | 'Delete' | 'Backspace' | 'Z'
 
 type Destination = 'pannel' | 'select' |  'pen' | 'eraser' | 'brush' | 'fill' |
-		   'pick' | 'circle' | 'rectangle' | 'line' | 'text' | 'node'
+		   'pick' | 'circle' | 'rectangle' | 'line' | 'text' | 'node' | 'revert'
 
 type Action = {
     alias: string
@@ -32,6 +33,7 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const { setTool } = useTool()
     const { setShapes, setImages } = useCanvasNodes()
     const {transformerRef} = useTransformer()
+    const {history} = useHistory()
 
     const set_tool = (tool_name: ToolName) => {
 	const new_tool = TOOLS.find((tool) => tool.name == tool_name)
@@ -52,6 +54,13 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	transformerRef.current.nodes([])
     }
 
+    const revert_change = () => {
+	if (history.current.length) {
+	    history.current[history.current.length - 1]()
+	    history.current.pop()
+	}
+    }
+
     const isKeyStroke = (key: string): key is KeyStroke => {
 	return key in SHORTCUTS
     }
@@ -70,6 +79,7 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	SHORTCUTS['T'] = { alias: 'Alt + t', destination: 'text', fire: () => set_tool('text') }
 	SHORTCUTS['Delete'] = { alias: 'Del', destination: 'node', fire: () => delete_node()}
 	SHORTCUTS['Backspace'] = { alias: 'Back', destination: 'node', fire: () => delete_node()}
+	SHORTCUTS['Z'] = { alias: 'Ctrl + z', destination: 'revert', fire: () => revert_change()}
     }, [])
 
     useEffect(() => {
@@ -81,6 +91,10 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	    } else if (event.key == 'Delete' || event.key == 'Backspace') {
 		event.preventDefault()
 		SHORTCUTS['Delete'].fire()
+		return
+	    } else if (event.ctrlKey && event.key == 'z') {
+		event.preventDefault()
+		SHORTCUTS['Z'].fire()
 		return
 	    }
 
