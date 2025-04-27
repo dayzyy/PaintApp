@@ -2,7 +2,7 @@ import Konva from 'konva';
 import { Stage, Layer, Circle, Rect, Line, Transformer, Image, Text } from 'react-konva';
 
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
-import { Stroke } from '../types/stroke.ts';
+import { TempShape } from '../types/shapes.ts';
 import { TextBox } from '../types/textbox.ts';
 
 import { CanvasMouseEvent } from '../types/events.ts'
@@ -10,7 +10,12 @@ import { ImageObj } from '../types/image.ts';
 
 import { Fragment } from 'react/jsx-runtime';
 
-import { useRef, RefObject, useEffect, Dispatch, SetStateAction } from 'react';
+import { useRef, useEffect, Dispatch, SetStateAction } from 'react';
+
+import { pick_color, fill_shape } from '../utils/canvas/color-interactions.tsx';
+import { start_draw, draw, stop_draw } from '../utils/canvas/free-hand-drawing.tsx';
+import { draw_shape_preview, resize_shape_preview, commit_shape_preview } from "../utils/canvas/shape-drawing.tsx"
+import { add_textbox, handle_edit_textbox } from '../utils/canvas/textbox-drawing.tsx';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
@@ -28,13 +33,12 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const { color, setColor } = useColor()
     const { tool } = useTool()
 
+    const stageRef = useRef<Konva.Stage | null>(null)
     const {layers, linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, textsLayerRef} = useCanvasLayers()
     const {shapes, lines, images, texts, setShapes, setLines, setImages, setTexts} = useCanvasNodes()
 
     const resize_animationFrameID = useRef<number | null>(null)
     const draw_line_animationFrameID = useRef<number | null>(null)
-
-    type TempShape = Konva.Circle | Konva.Rect | Konva.Line
 
     const tempShape = useRef<TempShape | null>(null)
     const tempLine = useRef<Konva.Line | null>(null)
@@ -46,240 +50,41 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
     const {history} = useHistory()
 
-    const start_draw = (event: CanvasMouseEvent) => {
-	const pos = event.target.getStage()?.getPointerPosition()
-	if (!pos) return
-
-	if (tool.name == 'brush') {
-	    tempLine.current = new Konva.Line({
-		points: [pos.x, pos.y], stroke: color, strokeWidth: 6,
-		tension: 0.5, lineCap: 'round', lineJoin: 'round',
-		globalCompositeOperation: 'source-over'
-	    })
-
-	    tempSubLine.current = new Konva.Line({
-		points: [pos.x, pos.y], stroke: color, strokeWidth: 13,
-		tension: 0.5, opacity: 0.7, lineCap: 'round', lineJoin: 'round',
-		globalCompositeOperation: 'source-over'
-	    })
-	    tempLineLayerRef.current?.add(tempLine.current)
-	    tempLineLayerRef.current?.add(tempSubLine.current)
-	    tempLineLayerRef.current?.batchDraw()
-	} else {
-	    tempLine.current = new Konva.Line({
-		points: [pos.x, pos.y], stroke: color, strokeWidth: tool.name == 'eraser' ? 10 : 2,
-		tension: 0.5, lineCap: 'round', lineJoin: 'round',
-		globalCompositeOperation: tool.name == 'eraser' ? 'destination-out' : 'source-over'
-	    })
-	    const target_layer = tool.name == 'eraser' ? linesLayerRef : tempLineLayerRef
-	    target_layer.current?.add(tempLine.current)
-	    target_layer.current?.batchDraw()
-	}
-    }
-
-    const stop_draw = (temp_line: RefObject<Konva.Line | null>) => {
-	const line = temp_line.current
-	if (!line) return
-
-	if (tool.name == 'eraser') {
-	    line.destroy()
-	    linesLayerRef.current?.batchDraw()
-	}
-	tempLineLayerRef.current?.destroyChildren()
-
-	const new_line = new Stroke(tool.name, line.stroke(), line.points())
-	setLines(prev => [...prev, new_line])
-	history.current.push(() => setLines(prev => prev.filter((line) => line.id != new_line.id)))
-
-	tempLine.current = null
-	tempSubLine.current = null
-    }
-
-    const draw = (event: CanvasMouseEvent, temp_line: RefObject<Konva.Line | null>, temp_sub_line: RefObject<Konva.Line | null>) => {
-	if (draw_line_animationFrameID.current) return
-
-	const line = temp_line.current
-	const sub_line = temp_sub_line.current
-	if (!line) return
-
-	draw_line_animationFrameID.current = requestAnimationFrame(() => {
-	    const point = event.target.getStage()?.getPointerPosition()
-	    if (!point) return
-
-	    line.points([...line.points(), point.x, point.y])
-	    if (sub_line) sub_line.points([...sub_line.points(), point.x, point.y])
-	    tempLineLayerRef.current?.batchDraw()
-
-	    draw_line_animationFrameID.current = null
-	})
-    }
-
-    const draw_shape_preview = (event: CanvasMouseEvent) => {
-	if (tool.name == 'circle') {
-	    const pos = event.target.getStage()?.getPointerPosition()
-	    if (!pos) return
-
-	    tempShape.current = new Konva.Circle({x: pos.x, y:pos.y, stroke: color, radius: 0})
-	    tempShapeLayerRef.current?.add(tempShape.current)
-	    tempShapeLayerRef.current?.batchDraw()
-	}
-	else if (tool.name == 'rectangle') {
-	    const pos = event.target.getStage()?.getPointerPosition()
-	    if (!pos) return
-
-	    tempShape.current = new Konva.Rect({x: pos.x, y:pos.y, stroke: color, width: 1, height: 0})
-	    tempShapeLayerRef.current?.add(tempShape.current)
-	    tempShapeLayerRef.current?.batchDraw()
-	}
-	else if (tool.name == 'line') {
-	    const pos = event.target.getStage()?.getPointerPosition()
-	    if (!pos) return
-
-	    tempShape.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, length: 0, tension: 0.5, lineCap: 'round', lineJoin: 'round'})
-	    tempShapeLayerRef.current?.add(tempShape.current)
-	    tempShapeLayerRef.current?.batchDraw()
-	}
-    }
-
-    const resize_shape_preview = (event: CanvasMouseEvent, temp_shape: RefObject<TempShape | null>) => {
-	if (resize_animationFrameID.current || !temp_shape.current) return
-
-	resize_animationFrameID.current = requestAnimationFrame(() => {
-	    const shape = temp_shape.current
-	    if (!shape) return
-
-	    const pos = event.target.getStage()?.getPointerPosition()
-	    if (!pos) return
-
-	    const dx = pos.x - shape.x()
-	    const dy = pos.y - shape.y()
-
-	    if (shape instanceof Konva.Circle) {
-		const radius = Math.sqrt(dx * dx + dy * dy)
-		if (radius >= 0 && Math.abs(shape.radius() - radius) > 5) {
-		    shape.radius(radius)
-		    tempShapeLayerRef.current?.batchDraw()
-		}
-	    }
-	    else if (shape instanceof Konva.Rect) {
-		let new_width = Math.abs(dx)
-		let new_height = Math.abs(dy)
-
-		shape.scaleX(dx >= 0 ? 1 : -1)
-		shape.scaleY(dy >= 0 ? 1 : -1)
-
-		shape.width(new_width)
-		shape.height(new_height)
-
-		tempShapeLayerRef.current?.batchDraw()
-	    }
-	    else if (shape instanceof Konva.Line) {
-		const start_x = shape.points()[0]
-		const start_y = shape.points()[1]
-		shape.points([start_x, start_y, pos.x, pos.y])
-
-		tempShapeLayerRef.current?.batchDraw()
-	    }
-
-	    resize_animationFrameID.current = null
-	})
-    }
-
-    const commit_shape_preview = (temp_shape: RefObject<TempShape | null>) => {
-	const shape = temp_shape.current
-	if (!shape) return
-
-	if (shape instanceof Konva.Circle) {
-	    const circle = new CircleObj(shape.x(), shape.y(), shape.stroke(), shape.radius())
-	    setShapes((prev: Shape[]): Shape[] => [...prev, circle])
-	    history.current.push(() => setShapes(prev => prev.filter(c => c.id != circle.id)))
-	}
-	else if (shape instanceof Konva.Rect) {
-	    const rect = new RectangleObj(shape.x(), shape.y(), shape.scaleX(), shape.scaleY(), shape.stroke(), shape.width(), shape.height())
-	    setShapes((prev: Shape[]): Shape[] => [...prev, rect])
-	    history.current.push(() => setShapes(prev => prev.filter(r => r.id != rect.id)))
-	}
-	else if (shape instanceof Konva.Line) {
-	    const line = new LineObj(shape.x(), shape.y(), shape.stroke(), shape.points())
-	    setShapes((prev: Shape[]): Shape[] => [...prev, line])
-	    history.current.push(() => setShapes(prev => prev.filter(l => l.id != line.id)))
-	}
-	tempShapeLayerRef.current?.destroyChildren()
-	tempShapeLayerRef.current?.draw()
-	tempShape.current = null
-	resize_animationFrameID.current = null
-    }
-
-    const pick_color = (event: CanvasMouseEvent) => {
-	const pos = event.target.getStage()?.getPointerPosition()
-	let color_set = false
-
-	if (pos) {
-	    for (let i = 0; i < layers.length; i++) {
-		const context = layers[i].current?.getCanvas()._canvas.getContext('2d')
-
-		if (context) {
-		    const pixel = context.getImageData(pos.x, pos.y, 1, 1).data
-
-		    const [r, g, b, a] = pixel
-		    if (pixel[3] == 0) {
-			if (i == layers.length - 1) {
-			    setColor('#fff')
-			    color_set = true
-			}
-			else continue
-		    } 
-		    else {
-			setColor(`rgba(${r}, ${g}, ${b}, ${a / 255})`)
-			color_set = true
-			break
-		    }
-		}
-	    }
-	    if (!color_set) setColor('#fff')
-	}
-    }
-
-    const fill_shape = (event: CanvasMouseEvent) => {
-    }
-
-    const add_textbox = (event: CanvasMouseEvent) => {
-	const pos = event.target.getStage()?.getPointerPosition()
-
-	if (pos) {
-	    const textbox = new TextBox(pos.x, pos.y)
-	    setTexts((prev) => [...prev, textbox])
-	    history.current.push(() => setTexts(prev => prev.filter(t => t.id != textbox.id)))
-	}
-    }
-
-    const handle_edit_textbox = (event: CanvasMouseEvent, textbox: TextBox) => {
-	textbox.turn_editable()
-	editingText.current = textbox
-    }
-
     const handle_mousedown = (event: CanvasMouseEvent) => {
 	if (tool.name == 'pen' || tool.name == 'eraser' || tool.name == 'brush') {
-	    start_draw(event)
+	    start_draw({event, tempLine, tempSubLine, tool_name: tool.name, color, linesLayerRef, tempLineLayerRef})
 	} else {
-	    draw_shape_preview(event)
+	    draw_shape_preview({event, tool_name: tool.name, color, tempShape, tempShapeLayerRef})
 	}
     }
 
     const handle_mousemove = (event: CanvasMouseEvent) => {
 	if (tempLine.current) {
-	    draw(event, tempLine, tempSubLine)
+	    draw({event, tempLine, tempSubLine, tempLineLayerRef, animationFrameID: draw_line_animationFrameID})
 	}
 	else if (tempShape.current) {
-	    resize_shape_preview(event, tempShape)
+	    resize_shape_preview({event, tempShape, tempShapeLayerRef, animationFrameID: resize_animationFrameID})
 	}
     }
 
     const handle_mouseup = (event: CanvasMouseEvent) => {
 	if (tempLine.current) {
-	    stop_draw(tempLine)
+	    const new_line = stop_draw({tempLine, tempSubLine, tool_name: tool.name, linesLayerRef, tempLineLayerRef})
+	    if (new_line) {
+		setLines(prev => [...prev, new_line])
+		history.current.push(() => setLines(prev => prev.filter((line) => line.id != new_line.id)))
+	    }
 	} else if (tempShape) {
-	    commit_shape_preview(tempShape)
+	    const new_shape = commit_shape_preview(tempShape)
+
+	    if (new_shape) {
+		setShapes((prev: Shape[]): Shape[] => [...prev, new_shape])
+		history.current.push(() => setShapes(prev => prev.filter(c => c.id != new_shape.id)))
+		tempShapeLayerRef.current?.destroyChildren()
+		tempShapeLayerRef.current?.draw()
+		tempShape.current = null
+		resize_animationFrameID.current = null
+	    }
 	}
     }
 
@@ -292,15 +97,21 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	    editingText.current = null
 	} 
 	if (tool.name == 'text') {
-	    add_textbox(event)
+	    const new_textbox = add_textbox(event)
+
+	    if (new_textbox) {
+		setTexts((prev) => [...prev, new_textbox])
+		history.current.push(() => setTexts(prev => prev.filter(t => t.id != new_textbox.id)))
+	    }
 	    return
 	}
 	if (tool.name == 'pick') {
-	    pick_color(event)
+	    const new_color = pick_color(event, layers)
+	    if (new_color) setColor(new_color)
 	    return
 	}
 	if (tool.name == 'fill') {
-	    fill_shape(event)
+	    fill_shape(event, stageRef)
 	}
     }
 
@@ -339,14 +150,12 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
     return ( 
 	<Stage
+	    ref={stageRef}
 	    width={window.innerWidth}
 	    height={window.innerHeight}
 	    onMouseDown={handle_mousedown}
 	    onMouseUp={handle_mouseup}
 	    onMouseMove={handle_mousemove}
-	    onTouchStart={start_draw}
-	    onTouchEnd={stop_draw}
-	    onTouchMove={draw}
 	    onClick={handle_click}
 	>
 	    <Layer ref={textsLayerRef}>
@@ -369,7 +178,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    onDragEnd={() => isSelected.current = null}
 			    onClick={(e) => handle_shape_click(e)}
 			    draggable
-			    onDblClick={(e) => handle_edit_textbox(e, text)}
+			    onDblClick={() => handle_edit_textbox({textbox: text, editingText})}
 
 			    onTransformEnd={() => text.handle_resize()}
 			/>

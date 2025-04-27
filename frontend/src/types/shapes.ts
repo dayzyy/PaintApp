@@ -73,4 +73,6 @@ class LineObj extends Shape {
     }
 }
 
-export { type Shape, CircleObj, RectangleObj, LineObj }
+type TempShape = Konva.Circle | Konva.Rect | Konva.Line
+
+export { type Shape, CircleObj, RectangleObj, LineObj, type TempShape }
