@@ -1,8 +1,13 @@
 import Konva from "konva"
 import { RefObject } from "react"
-import { CanvasMouseEvent } from "../types/events"
+import { CanvasMouseEvent } from "../../types/events"
 
-const pick_color = (event: CanvasMouseEvent, layers: RefObject<Konva.Layer | null>[]): string | null => {
+type PickColorProps = {
+event: CanvasMouseEvent
+layers: RefObject<Konva.Layer | null>[]
+}
+
+const pick_color = ({event, layers}: PickColorProps): string | null => {
     const pos = event.target.getStage()?.getPointerPosition()
     if (!pos) return null
 
@@ -27,38 +32,13 @@ const pick_color = (event: CanvasMouseEvent, layers: RefObject<Konva.Layer | nul
     return '#fff'
 }
 
-const fill_shape = (event: CanvasMouseEvent, stage_ref: RefObject<Konva.Stage | null>) => {
-    const stage = stage_ref.current
-    const pos = event.target.getStage()?.getPointerPosition()
-    if (!stage || !pos) return
+type FillShapeProps = {
+    event: CanvasMouseEvent 
+    stageRef: RefObject<Konva.Stage | null> 
+    color: string
+}
 
-    const x = pos.x
-    const y = pos.y
-
-    const layer = stage.getLayers()[0]
-    const KonvaCanvas = layer.getCanvas()
-    const htmlCanvas = KonvaCanvas._canvas
-
-    const temp_canvas = document.createElement('canvas')
-    temp_canvas.width = window.innerWidth
-    temp_canvas.height = window.innerHeight
-
-    const ctx = temp_canvas.getContext('2d')
-    ctx?.drawImage(htmlCanvas, 0, 0)
-
-    const imageData = ctx?.getImageData(0, 0, window.innerWidth, window.innerHeight)
-    const data = imageData?.data
-    if (!data) return
-
-    const index = (y * window.innerWidth + x) * 4
-    const r = data[index]
-    const g = data[index + 1]
-    const b = data[index + 2]
-    const a = data[index + 3]
-
-    while (true) {
-	
-    }
+const fill_shape = ({event, stageRef, color}: FillShapeProps) => {
 }
 
 export { pick_color, fill_shape }

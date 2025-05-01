@@ -7,7 +7,11 @@ import { ToolName } from "../types/tool"
 import { useTool } from "../context/ToolContext"
 import { useCanvasNodes } from "../context/CanvasNodesContext"
 import { useTransformer } from "../context/TransformerContext"
-import { useHistory } from "../context/HistoryContext"
+
+import { HistoryManager } from "../utils/history/history-manager"
+import { ImageObj } from "../types/image"
+import { TextBox } from "../types/textbox"
+import { Shape } from "../types/shapes.ts"
 
 type ShortcutListenerProps = {
     toggle_pannel: () => void
@@ -31,9 +35,8 @@ const SHORTCUTS: ShortcutMap = {} as ShortcutMap
 
 const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const { setTool } = useTool()
-    const { setShapes, setImages } = useCanvasNodes()
+    const { setShapes, setImages, setTexts } = useCanvasNodes()
     const {transformerRef} = useTransformer()
-    const {history} = useHistory()
 
     const set_tool = (tool_name: ToolName) => {
 	const new_tool = TOOLS.find((tool) => tool.name == tool_name)
@@ -43,22 +46,68 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const delete_node = () => {
 	if (!transformerRef.current || transformerRef.current.nodes().length == 0) return
 	let selectedNode = transformerRef.current.nodes()[0]
-
+	let removed_node: ImageObj | TextBox | Shape | null = null
+    
 	if (selectedNode instanceof Konva.Image) {
-	    setImages(prev => prev.filter((image) => image.node != selectedNode))
+	    setImages(prev => prev.filter((image) => {
+		if (image.node === selectedNode) {
+		    removed_node = image
+		    return false
+		}
+		return true
+	    }))
+
+	    if (removed_node) {
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "remove",
+		    node: removed_node,
+		    setNodes: setImages
+		})
+	    }
+	}
+	else if (selectedNode instanceof Konva.Text) {
+	    setTexts(prev => prev.filter((tb) => {
+		if (tb.node === selectedNode) {
+		    removed_node = tb
+		    return false
+		}
+		return true
+	    }))
+
+	    if (removed_node) {
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "remove",
+		    node: removed_node,
+		    setNodes: setTexts
+		})
+	    }
 	}
 	else if (selectedNode instanceof Konva.Shape) {
-	    setShapes(prev => prev.filter((shape) => shape.node != selectedNode))
+	    setShapes(prev => prev.filter((shape) => {
+		if (shape.node === selectedNode) {
+		    removed_node = shape
+		    return false
+		}
+		return true
+	    }))
+
+	    if (removed_node) {
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "remove",
+		    node: removed_node,
+		    setNodes: setShapes
+		})
+	    }
 	}
 
 	transformerRef.current.nodes([])
     }
 
     const revert_change = () => {
-	if (history.current.length) {
-	    history.current[history.current.length - 1]()
-	    history.current.pop()
-	}
+	HistoryManager.undo()
     }
 
     const isKeyStroke = (key: string): key is KeyStroke => {

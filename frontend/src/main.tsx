@@ -8,7 +8,6 @@ import { ColorProvider } from './context/ColorContext.tsx'
 import { CanvasLayersProvider } from './context/CanvasLayersContext.tsx'
 import { CanvasNodesProvider } from './context/CanvasNodesContext.tsx'
 import { TransformerProvider } from './context/TransformerContext.tsx'
-import { HistoryProvider } from './context/HistoryContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
     <ResolutionProvider>
@@ -17,9 +16,7 @@ createRoot(document.getElementById('root')!).render(
 		<CanvasLayersProvider>
 		    <CanvasNodesProvider>
 			<TransformerProvider>
-			    <HistoryProvider>
 				<App />
-			    </HistoryProvider>
 			</TransformerProvider>
 		    </CanvasNodesProvider>
 		</CanvasLayersProvider>

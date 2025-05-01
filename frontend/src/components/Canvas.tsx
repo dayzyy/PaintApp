@@ -10,7 +10,7 @@ import { ImageObj } from '../types/image.ts';
 
 import { Fragment } from 'react/jsx-runtime';
 
-import { useRef, useEffect, Dispatch, SetStateAction } from 'react';
+import { useRef, useEffect, Dispatch, SetStateAction, RefObject } from 'react';
 
 import { pick_color, fill_shape } from '../utils/canvas/color-interactions.tsx';
 import { start_draw, draw, stop_draw } from '../utils/canvas/free-hand-drawing.tsx';
@@ -22,7 +22,8 @@ import { useTool } from '../context/ToolContext';
 import { useCanvasLayers } from '../context/CanvasLayersContext.tsx';
 import { useCanvasNodes } from '../context/CanvasNodesContext.tsx';
 import { useTransformer } from '../context/TransformerContext.tsx';
-import { useHistory } from '../context/HistoryContext.tsx';
+
+import { HistoryManager } from '../utils/history/history-manager.ts';
 
 type CanvasProps = {
     image: HTMLImageElement | null
@@ -48,8 +49,6 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const {transformerRef} = useTransformer()
     const editingText = useRef<TextBox | null>(null)
 
-    const {history} = useHistory()
-
     const handle_mousedown = (event: CanvasMouseEvent) => {
 	if (tool.name == 'pen' || tool.name == 'eraser' || tool.name == 'brush') {
 	    start_draw({event, tempLine, tempSubLine, tool_name: tool.name, color, linesLayerRef, tempLineLayerRef})
@@ -70,20 +69,33 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const handle_mouseup = (event: CanvasMouseEvent) => {
 	if (tempLine.current) {
 	    const new_line = stop_draw({tempLine, tempSubLine, tool_name: tool.name, linesLayerRef, tempLineLayerRef})
+
 	    if (new_line) {
 		setLines(prev => [...prev, new_line])
-		history.current.push(() => setLines(prev => prev.filter((line) => line.id != new_line.id)))
+
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "add",
+		    node: new_line,
+		    setNodes: setLines
+		})
 	    }
 	} else if (tempShape) {
 	    const new_shape = commit_shape_preview(tempShape)
 
 	    if (new_shape) {
 		setShapes((prev: Shape[]): Shape[] => [...prev, new_shape])
-		history.current.push(() => setShapes(prev => prev.filter(c => c.id != new_shape.id)))
 		tempShapeLayerRef.current?.destroyChildren()
 		tempShapeLayerRef.current?.draw()
 		tempShape.current = null
 		resize_animationFrameID.current = null
+
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "add",
+		    node: new_shape,
+		    setNodes: setShapes
+		})
 	    }
 	}
     }
@@ -101,17 +113,23 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 	    if (new_textbox) {
 		setTexts((prev) => [...prev, new_textbox])
-		history.current.push(() => setTexts(prev => prev.filter(t => t.id != new_textbox.id)))
+
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "add",
+		    node: new_textbox,
+		    setNodes: setTexts
+		})
 	    }
 	    return
 	}
 	if (tool.name == 'pick') {
-	    const new_color = pick_color(event, layers)
+	    const new_color = pick_color({event, layers})
 	    if (new_color) setColor(new_color)
 	    return
 	}
 	if (tool.name == 'fill') {
-	    fill_shape(event, stageRef)
+	    fill_shape({event, stageRef, color: "000000"})
 	}
     }
 
@@ -134,6 +152,14 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     }
 
     useEffect(() => {
+	// Initialize history with a blank canvas snapshot
+	//const data = HistoryManager.create_initial_node_data(linesLayerRef)
+	//if (data) {
+	//    HistoryManager.create_new_node(data)
+	//}
+    }, [])
+
+    useEffect(() => {
 	if (!image) return
 	
 	const img = new window.Image()
@@ -141,8 +167,17 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 	img.onload = () => {
 	    const new_image = new ImageObj(image)
-	    setImages(prev => [...prev, new_image])
-	    history.current.push(() => setImages(prev => prev.filter(i => i.id != new_image.id)))
+
+	    if (new_image) {
+		setImages(prev => [...prev, new_image])
+
+		HistoryManager.create_new_node({
+		    change: "add/remove",
+		    operation: "add",
+		    node: new_image,
+		    setNodes: setImages
+		})
+	    }
 	}
 
 	setImage(null)
@@ -197,7 +232,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    image={img.reference}
 			    width={img.width}
 			    height={img.height}
-			    onMouseDown={() => handle_select(img.reference.src)}
+			    onMouseDown={() => handle_select(img.id)}
 			    onDragStart={(e) => handle_drag_start(e, img.reference.src)}
 			    onDragEnd={() => isSelected.current = null}
 			    onClick={(e) => handle_shape_click(e)}
