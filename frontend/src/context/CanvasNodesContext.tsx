@@ -1,4 +1,4 @@
-import { useContext, ReactNode, useState, createContext } from "react";
+import { useContext, ReactNode, useState, createContext, useEffect, useRef, RefObject } from "react";
 import React from "react";
 
 import { Stroke } from "../types/stroke";
@@ -15,6 +15,9 @@ type CanvasNodesContextType = {
     setLines: React.Dispatch<React.SetStateAction<Stroke[]>>
     setImages: React.Dispatch<React.SetStateAction<ImageObj[]>>
     setTexts: React.Dispatch<React.SetStateAction<TextBox[]>>
+    shapesRef: RefObject<Shape[]>
+    imagesRef: RefObject<ImageObj[]>
+    textsRef: RefObject<TextBox[]>
 }
 
 const CanvasNodesContext = createContext<CanvasNodesContextType | null>(null)
@@ -24,6 +27,19 @@ const CanvasNodesProvider = ({children}: {children: ReactNode}) => {
     const [shapes, setShapes] = useState<Shape[]>([])
     const [images, setImages] = useState<ImageObj[]>([])
     const [texts, setTexts] = useState<TextBox[]>([])
+    const shapesRef = useRef<Shape[]>([])
+    const imagesRef = useRef<ImageObj[]>([])
+    const textsRef = useRef<TextBox[]>([])
+
+    useEffect(() => {
+	shapesRef.current = shapes
+    }, [shapes])
+    useEffect(() => {
+	imagesRef.current = images
+    }, [images])
+    useEffect(() => {
+	textsRef.current = texts
+    }, [texts])
 
     return (
 	<CanvasNodesContext.Provider 
@@ -31,7 +47,8 @@ const CanvasNodesProvider = ({children}: {children: ReactNode}) => {
 		    lines, shapes,
 		    images, texts,
 		    setLines, setShapes,
-		    setImages, setTexts
+		    setImages, setTexts,
+		    textsRef, imagesRef, shapesRef
 	        }}
 	>
 	    {children}

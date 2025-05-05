@@ -23,6 +23,21 @@ class TextBox {
 	this.height = KonvaTextNode.height()
     }
 
+    clone = (position?: {x: number, y: number}): TextBox | null => {
+	let new_textbox = null
+
+	if (position) {
+	    new_textbox = new TextBox(position.x, position.y)
+	    new_textbox.id = this.id
+	    new_textbox.text = this.text
+	    if (this.width) new_textbox.width = this.width
+	    if (this.height) new_textbox.height = this.height
+	    if (this.node) new_textbox.node = this.node
+	}
+
+	return new_textbox
+    }
+
     turn_editable(): void {
 	if (!this.node) return
 

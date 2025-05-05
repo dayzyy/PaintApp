@@ -2,8 +2,8 @@ import Konva from "konva"
 
 class ImageObj {
     id: string = crypto.randomUUID()
-    x: number = 200
-    y: number = 200
+    x: number = 100
+    y: number = 50
     width: number = 300
     height: number
     reference: HTMLImageElement
@@ -18,6 +18,20 @@ class ImageObj {
 	if (KonvaImageNode) {
 	    this.node = KonvaImageNode
 	}
+    }
+
+    clone = (position?: {x: number, y: number}): ImageObj | null => {
+	let new_img = null
+
+	if (position) {
+	    new_img = new ImageObj(this.reference)
+	    new_img.id = this.id
+	    new_img.x = position.x
+	    new_img.y = position.y
+	    if (this.node) new_img.node = this.node
+	}
+
+	return new_img
     }
 }
 

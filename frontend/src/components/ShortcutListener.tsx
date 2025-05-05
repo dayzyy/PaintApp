@@ -9,19 +9,16 @@ import { useCanvasNodes } from "../context/CanvasNodesContext"
 import { useTransformer } from "../context/TransformerContext"
 
 import { HistoryManager } from "../utils/history/history-manager"
-import { ImageObj } from "../types/image"
-import { TextBox } from "../types/textbox"
-import { Shape } from "../types/shapes.ts"
 
 type ShortcutListenerProps = {
     toggle_pannel: () => void
 }
 
 type KeyStroke = 'A' | 'Escape' | 'U' | 'E' | 'B' | 'G' | 'I' | 'O' |
-		 'R' | 'L' | 'T' | 'Delete' | 'Backspace' | 'Z'
+		 'R' | 'L' | 'T' | 'Delete' | 'Backspace' | 'Z' | 'X'
 
 type Destination = 'pannel' | 'select' |  'pen' | 'eraser' | 'brush' | 'fill' |
-		   'pick' | 'circle' | 'rectangle' | 'line' | 'text' | 'node' | 'revert'
+		   'pick' | 'circle' | 'rectangle' | 'line' | 'text' | 'node' | 'undo' | 'redo'
 
 type Action = {
     alias: string
@@ -35,7 +32,7 @@ const SHORTCUTS: ShortcutMap = {} as ShortcutMap
 
 const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const { setTool } = useTool()
-    const { setShapes, setImages, setTexts } = useCanvasNodes()
+    const { setShapes, setImages, setTexts, shapesRef, imagesRef, textsRef } = useCanvasNodes()
     const {transformerRef} = useTransformer()
 
     const set_tool = (tool_name: ToolName) => {
@@ -46,68 +43,50 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const delete_node = () => {
 	if (!transformerRef.current || transformerRef.current.nodes().length == 0) return
 	let selectedNode = transformerRef.current.nodes()[0]
-	let removed_node: ImageObj | TextBox | Shape | null = null
-    
-	if (selectedNode instanceof Konva.Image) {
-	    setImages(prev => prev.filter((image) => {
-		if (image.node === selectedNode) {
-		    removed_node = image
-		    return false
-		}
-		return true
-	    }))
 
-	    if (removed_node) {
-		HistoryManager.create_new_node({
-		    change: "add/remove",
-		    operation: "remove",
-		    node: removed_node,
-		    setNodes: setImages
-		})
-	    }
+	if (selectedNode instanceof Konva.Image) {
+	    const toRemove = imagesRef.current.find(image => image.node === selectedNode)
+	    if (!toRemove) return;
+
+	    setImages(prev => prev.filter(image => image.node !== selectedNode))
+
+	    HistoryManager.create_new_node({
+		change: "add/remove",
+		operation: "remove",
+		node: toRemove,
+		setNodes: setImages
+	    })
 	}
 	else if (selectedNode instanceof Konva.Text) {
-	    setTexts(prev => prev.filter((tb) => {
-		if (tb.node === selectedNode) {
-		    removed_node = tb
-		    return false
-		}
-		return true
-	    }))
+	    const toRemove = textsRef.current.find(tb => tb.node === selectedNode);
+	    if (!toRemove) return;
 
-	    if (removed_node) {
-		HistoryManager.create_new_node({
-		    change: "add/remove",
-		    operation: "remove",
-		    node: removed_node,
-		    setNodes: setTexts
-		})
-	    }
+	    setTexts(prev => prev.filter(tb => tb.node !== selectedNode))
+
+	    HistoryManager.create_new_node({
+		change: "add/remove",
+		operation: "remove",
+		node: toRemove,
+		setNodes: setTexts
+	    })
 	}
 	else if (selectedNode instanceof Konva.Shape) {
-	    setShapes(prev => prev.filter((shape) => {
-		if (shape.node === selectedNode) {
-		    removed_node = shape
-		    return false
-		}
-		return true
-	    }))
+	    const toRemove = shapesRef.current.find(shape => shape.node === selectedNode);
+	    if (!toRemove) return;
 
-	    if (removed_node) {
-		HistoryManager.create_new_node({
-		    change: "add/remove",
-		    operation: "remove",
-		    node: removed_node,
-		    setNodes: setShapes
-		})
-	    }
+	    setShapes(prev => prev.filter(shape => shape.node !== selectedNode))
+
+	    console.log(toRemove);
+
+	    HistoryManager.create_new_node({
+		change: "add/remove",
+		operation: "remove",
+		node: toRemove,
+		setNodes: setShapes
+	    })
 	}
 
 	transformerRef.current.nodes([])
-    }
-
-    const revert_change = () => {
-	HistoryManager.undo()
     }
 
     const isKeyStroke = (key: string): key is KeyStroke => {
@@ -128,7 +107,8 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	SHORTCUTS['T'] = { alias: 'Alt + t', destination: 'text', fire: () => set_tool('text') }
 	SHORTCUTS['Delete'] = { alias: 'Del', destination: 'node', fire: () => delete_node()}
 	SHORTCUTS['Backspace'] = { alias: 'Back', destination: 'node', fire: () => delete_node()}
-	SHORTCUTS['Z'] = { alias: 'Ctrl + z', destination: 'revert', fire: () => revert_change()}
+	SHORTCUTS['Z'] = { alias: 'Ctrl + z', destination: 'undo', fire: () => HistoryManager.undo()}
+	SHORTCUTS['X'] = { alias: 'Ctrl + x', destination: 'redo', fire: () => HistoryManager.redo()}
     }, [])
 
     useEffect(() => {
@@ -144,6 +124,10 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	    } else if (event.ctrlKey && event.key == 'z') {
 		event.preventDefault()
 		SHORTCUTS['Z'].fire()
+		return
+	    } else if (event.ctrlKey && event.key == 'x') {
+		event.preventDefault()
+		SHORTCUTS['X'].fire()
 		return
 	    }
 

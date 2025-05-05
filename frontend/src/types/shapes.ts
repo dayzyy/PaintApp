@@ -17,6 +17,12 @@ abstract class Shape  {
 	this.y = y
 	this.stroke_color = stroke_color
     }
+
+    assign_node = (KonvaNode: Konva.Circle | Konva.Rect | Konva.Line) => {
+	if (KonvaNode) {
+	    this.node = KonvaNode
+	}
+    }
 }
 
 class CircleObj extends Shape  {
@@ -28,10 +34,17 @@ class CircleObj extends Shape  {
 	this.radius = radius
     }
 
-    assign_node = (KonvaCircleNode: Konva.Circle) => {
-	if (KonvaCircleNode) {
-	    this.node = KonvaCircleNode
+    clone = (position?: {x: number, y: number}): CircleObj | null => {
+	let new_circle = null
+
+	if (position) {
+	    new_circle = new CircleObj(position.x, position.y, this.stroke_color, this.radius)
+	    new_circle.id = this.id
+	    if (this.fill) new_circle.fill = this.fill
+	    if (this.node) new_circle.node = this.node
 	}
+
+	return new_circle
     }
 }
 
@@ -50,10 +63,17 @@ class RectangleObj extends Shape {
 	this.height = height
     }
 
-    assign_node = (KonvaCircleNode: Konva.Rect) => {
-	if (KonvaCircleNode) {
-	    this.node = KonvaCircleNode
+    clone = (position?: {x: number, y: number}): RectangleObj | null => {
+	let new_rect = null
+
+	if (position) {
+	    new_rect = new RectangleObj(position.x, position.y, this.dx, this.dy, this.stroke_color, this.width, this.height)
+	    new_rect.id = this.id
+	    if (this.fill) new_rect.fill = this.fill
+	    if (this.node) new_rect.node = this.node
 	}
+
+	return new_rect
     }
 }
 
@@ -66,10 +86,16 @@ class LineObj extends Shape {
 	this.points = points
     }
 
-    assign_node = (KonvaCircleNode: Konva.Line) => {
-	if (KonvaCircleNode) {
-	    this.node = KonvaCircleNode
+    clone = (position?: {x: number, y: number}): LineObj | null => {
+	let new_line = null
+
+	if (position) {
+	    new_line = new LineObj(position.x, position.y, this.stroke_color, this.points)
+	    new_line.id = this.id
+	    if (this.node) new_line.node = this.node
 	}
+
+	return new_line
     }
 }
 
