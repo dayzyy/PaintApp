@@ -45,7 +45,6 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const tempLine = useRef<Konva.Line | null>(null)
     const tempSubLine = useRef<Konva.Line | null>(null)
 
-    const isSelected = useRef<string | null>(null)
     const {transformerRef} = useTransformer()
     const editingText = useRef<TextBox | null>(null)
 
@@ -68,7 +67,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	}
     }
 
-    const handle_mouseup = (event: CanvasMouseEvent) => {
+    const handle_mouseup = () => {
 	if (tempLine.current) {
 	    const new_line = stop_draw({tempLine, tempSubLine, tool_name: tool.name, linesLayerRef, tempLineLayerRef})
 
@@ -131,47 +130,46 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	    return
 	}
 	if (tool.name == 'fill') {
-	    fill_shape({event, stageRef, color: "000000"})
-	}
-    }
-
-    const handle_select = (id: string) => {
-	if (tool.name == 'select') {
-	    isSelected.current = id
+	    fill_shape({event, color: color, setter: setShapes})
 	}
     }
 
     const handle_shape_click = (event: CanvasMouseEvent) => {
+	if (tool.name != 'select') return
+
 	event.cancelBubble = true
 	const target = event.currentTarget
 	transformerRef.current?.nodes([target])
     }
 
-    const handle_drag_start = (event: CanvasMouseEvent, id: string) => {
-	if (isSelected.current != id) {
-	    event.target.stopDrag()
-	}
-	else {
+    const handle_drag_start = (event: CanvasMouseEvent) => {
+	    if (tool.name != 'select') {
+		event.target.stopDrag()
+	    }
+
 	    const current_node = event.target
 	    if (!current_node) return
+	    console.log('Clicked node', current_node)
 
 	    let node = null
 	    let set_nodes = null
+	    console.log('Node to edit', node)
 
-	    if (event.target instanceof Konva.Image) {
-		node = images.find(shape => shape.node?.id == event.target.id)
+	    if (current_node instanceof Konva.Image) {
+		node = images.find(shape => shape.node?.id() == current_node.id())
 		set_nodes = setImages
 	    }
-	    else if (event.target instanceof Konva.Text) {
-		node = texts.find(shape => shape.node?.id == event.target.id)
+	    else if (current_node instanceof Konva.Text) {
+		node = texts.find(shape => shape.node?.id() == current_node.id())
 		set_nodes = setTexts
 	    }
-	    else if (event.target instanceof Konva.Shape) {
-		node = shapes.find(shape => shape.node?.id == event.target.id)
+	    else if (current_node instanceof Konva.Shape) {
+		node = shapes.find(shape => shape.node?.id() == current_node.id())
 		set_nodes = setShapes
 	    }
 
 	    if (!node || !set_nodes) return
+	    console.log('Editing', node)
 
 	    nodeDataRef.current = {
 		change: "update",
@@ -179,7 +177,6 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		position: {old: {x: current_node.x(), y: current_node.y()}, new: {x: null, y: null}},
 		setNodes: set_nodes
 	    }
-	}
     }
 
     const handle_drag_end = (event: CanvasMouseEvent, id: string, setter: Dispatch<SetStateAction<any>>) => {
@@ -187,13 +184,19 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	    const current_node = event.target
 	    if (!current_node) return
 
-	    nodeDataRef.current.position.new = {x: current_node.x(), y: current_node.y()}
+	    const new_position = {x: current_node.x(), y: current_node.y()}
+	    if (JSON.stringify(new_position) == JSON.stringify(nodeDataRef.current.position.old)) {
+		nodeDataRef.current = null
+		return
+	    }
+
+	    nodeDataRef.current.position.new = new_position
 
 	    setter(prev => {
 		return (
 		    prev.map(node => {
 			return node.id == id
-			? node.clone({x: current_node.x(), y: current_node.y()})
+			? node.clone(undefined, {x: current_node.x(), y: current_node.y()})
 			: node
 		    })
 		)
@@ -201,9 +204,8 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 	    HistoryManager.create_new_node(nodeDataRef.current)
 	    nodeDataRef.current = null
+	    current_node.stopDrag()
 	}
-
-	isSelected.current = null
     }
 
     useEffect(() => {
@@ -230,11 +232,6 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	setImage(null)
     }, [image])
 
-    useEffect(() => {
-	console.log(shapes)
-	shapesLayerRef.current?.draw()
-    }, [shapes])
-
     return ( 
 	<Stage
 	    ref={stageRef}
@@ -260,8 +257,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    fontFamily='Nunito'
 			    padding={5}
 
-			    onMouseDown={() => handle_select(text.id)}
-			    onDragStart={(e) => handle_drag_start(e, text.id)}
+			    onDragStart={(e) => handle_drag_start(e)}
 			    onDragEnd={(e) => handle_drag_end(e, text.id, setTexts)}
 			    onClick={(e) => handle_shape_click(e)}
 			    draggable
@@ -284,8 +280,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    image={img.reference}
 			    width={img.width}
 			    height={img.height}
-			    onMouseDown={() => handle_select(img.id)}
-			    onDragStart={(e) => handle_drag_start(e, img.id)}
+			    onDragStart={(e) => handle_drag_start(e)}
 			    onDragEnd={(e) => handle_drag_end(e, img.id, setImages)}
 			    onClick={(e) => handle_shape_click(e)}
 			    draggable
@@ -340,9 +335,9 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    x={circle.x}
 				    y={circle.y}
 				    stroke={circle.stroke_color}
+				    fill={circle.fill}
 				    radius={circle.radius}
-				    onMouseDown={() => handle_select(circle.id)}
-				    onDragStart={(e) => handle_drag_start(e, circle.id)}
+				    onDragStart={(e) => handle_drag_start(e)}
 				    onDragEnd={(e) => handle_drag_end(e, circle.id, setShapes)}
 				    draggable
 				    onClick={(e) => handle_shape_click(e)}
@@ -361,10 +356,10 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    scaleX={rectangle.dx}
 				    scaleY={rectangle.dy}
 				    stroke={rectangle.stroke_color}
+				    fill={rectangle.fill}
 				    width={rectangle.width}
 				    height={rectangle.height}
-				    onMouseDown={() => handle_select(rectangle.id)}
-				    onDragStart={(e) => handle_drag_start(e, rectangle.id)}
+				    onDragStart={(e) => handle_drag_start(e)}
 				    onDragEnd={(e) => handle_drag_end(e, rectangle.id, setShapes)}
 				    onClick={(e) => handle_shape_click(e)}
 				    draggable
@@ -382,8 +377,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    y={line.y}
 				    stroke={line.stroke_color}
 				    points={line.points}
-				    onMouseDown={() => handle_select(line.id)}
-				    onDragStart={(e) => handle_drag_start(e, line.id)}
+				    onDragStart={(e) => handle_drag_start(e)}
 				    onDragEnd={(e) => handle_drag_end(e, line.id, setShapes)}
 				    onClick={(e) => handle_shape_click(e)}
 				    draggable
@@ -393,20 +387,29 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    })
 		}
 
-		<Transformer
-		    ref={transformerRef}
-		    onTransform={(e) => {
+		{
+		    tool.name == 'select' &&
+		    <Transformer
+			ref={transformerRef}
+			onTransformStart={() => {
+			}}
+			onTransform={(e) => {
 			    const node = e.target
 			    const scaleX = node.scaleX()
 			    const scaleY = node.scaleY()
 
-			    node.width(node.width() * scaleX)
-			    node.height(node.height() * scaleY)
+			    if (node instanceof Konva.Line) return
+				
+			    else if (node instanceof Konva.Rect || node instanceof Konva.Image || node instanceof Konva.Circle) {
+				node.width(node.width() * scaleX)
+				node.height(node.height() * scaleY)
+			    }
 
 			    node.scaleX(1)
 			    node.scaleY(1)
-		    }}
-		/>
+			}}
+		    />
+		}
 	    </Layer>
 	</Stage>
     )

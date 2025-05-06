@@ -120,7 +120,19 @@ class HistoryManager {
 		    return (
 			prev.map(node => {
 			    return node.id == head_node.data.node.id
-			    ? head_node.data.node.clone(head_node.data.position.old)
+			    ? head_node.data.node.clone(undefined, head_node.data.position.old)
+			    : node
+			})
+		    )
+		})
+	    }
+	    else if (head_node.data.fillColor) {
+		console.log('Reverting a color update')
+		head_node.data.setNodes(prev => {
+		    return (
+			prev.map(node => {
+			    return node.id == head_node.data.node.id
+			    ? head_node.data.node.clone(head_node.data.fillColor.old)
 			    : node
 			})
 		    )
@@ -153,7 +165,18 @@ class HistoryManager {
 		    return (
 			prev.map(node => {
 			    return node.id == head_node.data.node.id
-			    ? head_node.data.node.clone(head_node.data.position.new)
+			    ? head_node.data.node.clone(undefined, head_node.data.position.new)
+			    : node
+			})
+		    )
+		})
+	    }
+	    else if (head_node.data.fillColor) {
+		head_node.data.setNodes(prev => {
+		    return (
+			prev.map(node => {
+			    return node.id == head_node.data.node.id
+			    ? head_node.data.node.clone(head_node.data.fillColor.new)
 			    : node
 			})
 		    )

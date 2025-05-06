@@ -9,7 +9,7 @@ abstract class Shape  {
     y: number
     stroke_color: string | CanvasGradient
     draggable: boolean = true
-    fill?: string
+    fill: string = 'transparent'
     node?: Konva.Shape
 
     constructor(x: number, y: number, stroke_color: string | CanvasGradient) {
@@ -20,6 +20,7 @@ abstract class Shape  {
 
     assign_node = (KonvaNode: Konva.Circle | Konva.Rect | Konva.Line) => {
 	if (KonvaNode) {
+	    KonvaNode.id(this.id)
 	    this.node = KonvaNode
 	}
     }
@@ -34,13 +35,25 @@ class CircleObj extends Shape  {
 	this.radius = radius
     }
 
-    clone = (position?: {x: number, y: number}): CircleObj | null => {
+    clone = (color?: string, position?: {x: number, y: number}, dimesions?: {width: number, height: number}): CircleObj | null => {
 	let new_circle = null
 
 	if (position) {
 	    new_circle = new CircleObj(position.x, position.y, this.stroke_color, this.radius)
 	    new_circle.id = this.id
 	    if (this.fill) new_circle.fill = this.fill
+	    if (this.node) new_circle.node = this.node
+	}
+	if (dimesions) {
+	    new_circle = new CircleObj(this.x, this.y, this.stroke_color, this.radius)
+	    new_circle.id = this.id
+	    if (this.fill) new_circle.fill = this.fill
+	    if (this.node) new_circle.node = this.node
+	}
+	if (color) {
+	    new_circle = new CircleObj(this.x, this.y, this.stroke_color, this.radius)
+	    new_circle.id = this.id
+	    new_circle.fill = color
 	    if (this.node) new_circle.node = this.node
 	}
 
@@ -63,13 +76,19 @@ class RectangleObj extends Shape {
 	this.height = height
     }
 
-    clone = (position?: {x: number, y: number}): RectangleObj | null => {
+    clone = (color?: string, position?: {x: number, y: number}): RectangleObj | null => {
 	let new_rect = null
 
 	if (position) {
 	    new_rect = new RectangleObj(position.x, position.y, this.dx, this.dy, this.stroke_color, this.width, this.height)
 	    new_rect.id = this.id
 	    if (this.fill) new_rect.fill = this.fill
+	    if (this.node) new_rect.node = this.node
+	}
+	if (color) {
+	    new_rect = new RectangleObj(this.x, this.y, this.dx, this.dy, this.stroke_color, this.width, this.height)
+	    new_rect.id = this.id
+	    new_rect.fill = color
 	    if (this.node) new_rect.node = this.node
 	}
 
@@ -86,7 +105,7 @@ class LineObj extends Shape {
 	this.points = points
     }
 
-    clone = (position?: {x: number, y: number}): LineObj | null => {
+    clone = (color?: string, position?: {x: number, y: number}): LineObj | null => {
 	let new_line = null
 
 	if (position) {

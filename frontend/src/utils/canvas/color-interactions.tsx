@@ -1,10 +1,12 @@
 import Konva from "konva"
-import { RefObject } from "react"
+import React, { RefObject, SetStateAction } from "react"
 import { CanvasMouseEvent } from "../../types/events"
+import { Shape } from "../../types/shapes.ts"
+import { HistoryManager } from "../history/history-manager.ts"
 
 type PickColorProps = {
-event: CanvasMouseEvent
-layers: RefObject<Konva.Layer | null>[]
+    event: CanvasMouseEvent
+    layers: RefObject<Konva.Layer | null>[]
 }
 
 const pick_color = ({event, layers}: PickColorProps): string | null => {
@@ -34,11 +36,30 @@ const pick_color = ({event, layers}: PickColorProps): string | null => {
 
 type FillShapeProps = {
     event: CanvasMouseEvent 
-    stageRef: RefObject<Konva.Stage | null> 
     color: string
+    setter: React.Dispatch<SetStateAction<Shape[]>>
 }
 
-const fill_shape = ({event, stageRef, color}: FillShapeProps) => {
+const fill_shape = ({event, color, setter}: FillShapeProps) => {
+    const node = event.target
+    if (!node) return
+
+    if (node instanceof Konva.Rect || node instanceof Konva.Circle) {
+	setter(prev => prev.map(shape => {
+	    if (shape.node == node) {
+		const new_shape = shape.clone(color)
+
+		HistoryManager.create_new_node({
+		    change: 'update',
+		    node: new_shape,
+		    fillColor: {old: shape.fill, new: color},
+		    setNodes: setter
+		})
+		return new_shape
+	    }
+	    else return shape
+	}))
+    }
 }
 
 export { pick_color, fill_shape }
