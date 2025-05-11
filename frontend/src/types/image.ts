@@ -1,37 +1,29 @@
-import Konva from "konva"
+import { PositionedNode } from "./PositionedNode"
 
-class ImageObj {
-    id: string = crypto.randomUUID()
-    x: number = 100
-    y: number = 50
-    width: number = 300
-    height: number
+class ImageObj extends PositionedNode {
     reference: HTMLImageElement
-    node?: Konva.Image
 
-    constructor(image: HTMLImageElement) {
-	this.height = (image.height / this.width) * 300
+    constructor(image: HTMLImageElement, width?: number, height?: number) {
+	super(50, 100, undefined, width ?? 300, height ?? (image.height / 300) * 300)
 	this.reference = image
     }
 
-    assign_node = (KonvaImageNode: Konva.Image) => {
-	if (KonvaImageNode) {
-	    this.node = KonvaImageNode
-	}
-    }
+    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}): this | null => {
 
-    clone = (position?: {x: number, y: number}): ImageObj | null => {
-	let new_img = null
-
-	if (position) {
-	    new_img = new ImageObj(this.reference)
+	if (this.has_changes(position, dimensions)) {
+	    const new_img = new ImageObj(
+		this.reference,
+		dimensions?.width ?? this.width,
+		dimensions?.height ?? this.height
+	    )
+	    new_img.x = position?.x ?? this.x
+	    new_img.y = position?.y ?? this.y
 	    new_img.id = this.id
-	    new_img.x = position.x
-	    new_img.y = position.y
-	    if (this.node) new_img.node = this.node
-	}
+	    new_img.node = this.node
 
-	return new_img
+	    return new_img as this
+	}
+	else return null
     }
 }
 

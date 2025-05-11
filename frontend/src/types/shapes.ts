@@ -1,28 +1,14 @@
 import Konva from "konva"
+import { PositionedNode } from "./PositionedNode"
 
 type ShapeType = 'circle' | 'rectangle' | 'line'
 
-abstract class Shape  {
-    id: string = crypto.randomUUID()
+abstract class Shape extends PositionedNode {
     abstract type: ShapeType
-    x: number
-    y: number
-    stroke_color: string | CanvasGradient
-    draggable: boolean = true
     fill: string = 'transparent'
-    node?: Konva.Shape
 
-    constructor(x: number, y: number, stroke_color: string | CanvasGradient) {
-	this.x = x
-	this.y = y
-	this.stroke_color = stroke_color
-    }
-
-    assign_node = (KonvaNode: Konva.Circle | Konva.Rect | Konva.Line) => {
-	if (KonvaNode) {
-	    KonvaNode.id(this.id)
-	    this.node = KonvaNode
-	}
+    constructor(x: number, y: number, stroke_color: string | CanvasGradient, width?: number, height?: number) {
+	super(x, y, stroke_color, width, height)
     }
 }
 
@@ -30,34 +16,30 @@ class CircleObj extends Shape  {
     type: ShapeType = 'circle'
     radius
 
-    constructor(x: number, y: number, stroke_color: string | CanvasGradient, radius: number) {
-	super(x, y, stroke_color)
+    constructor(x: number, y: number, stroke_color: string | CanvasGradient, radius: number, width?: number, height?: number) {
+	super(x, y, stroke_color, width, height)
 	this.radius = radius
     }
 
-    clone = (color?: string, position?: {x: number, y: number}, dimesions?: {width: number, height: number}): CircleObj | null => {
-	let new_circle = null
+    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}): this | null => {
+	const color_changed = color != undefined && color != this.fill
+	
+	if (this.has_changes(position, dimensions) || color_changed) {
+	    const new_circle = new CircleObj(
+		position?.x ?? this.x,
+		position?.y ?? this.y,
+		this.stroke_color ?? '#000',
+		this.radius,
+		dimensions?.width ?? undefined,
+		dimensions?.height ?? undefined
+	    )
+	    new_circle.id = this.id
+	    new_circle.node = this.node
+	    new_circle.fill = color ?? this.fill
 
-	if (position) {
-	    new_circle = new CircleObj(position.x, position.y, this.stroke_color, this.radius)
-	    new_circle.id = this.id
-	    if (this.fill) new_circle.fill = this.fill
-	    if (this.node) new_circle.node = this.node
+	    return new_circle as this
 	}
-	if (dimesions) {
-	    new_circle = new CircleObj(this.x, this.y, this.stroke_color, this.radius)
-	    new_circle.id = this.id
-	    if (this.fill) new_circle.fill = this.fill
-	    if (this.node) new_circle.node = this.node
-	}
-	if (color) {
-	    new_circle = new CircleObj(this.x, this.y, this.stroke_color, this.radius)
-	    new_circle.id = this.id
-	    new_circle.fill = color
-	    if (this.node) new_circle.node = this.node
-	}
-
-	return new_circle
+	else return null
     }
 }
 
@@ -65,34 +47,35 @@ class RectangleObj extends Shape {
     type: ShapeType = 'rectangle'
     dx
     dy
-    width
-    height
 
     constructor(x: number, y: number, dx: number, dy: number, stroke_color: string | CanvasGradient, width: number, height: number) {
-	super(x, y, stroke_color)
+	super(x, y, stroke_color, width, height)
 	this.dx = dx
 	this.dy = dy
-	this.width = width
-	this.height = height
     }
 
-    clone = (color?: string, position?: {x: number, y: number}): RectangleObj | null => {
-	let new_rect = null
+    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}): this | null => {
+	const color_changed = color != undefined && color != this.fill
 
-	if (position) {
-	    new_rect = new RectangleObj(position.x, position.y, this.dx, this.dy, this.stroke_color, this.width, this.height)
-	    new_rect.id = this.id
-	    if (this.fill) new_rect.fill = this.fill
-	    if (this.node) new_rect.node = this.node
-	}
-	if (color) {
-	    new_rect = new RectangleObj(this.x, this.y, this.dx, this.dy, this.stroke_color, this.width, this.height)
-	    new_rect.id = this.id
-	    new_rect.fill = color
-	    if (this.node) new_rect.node = this.node
-	}
+	if (this.has_changes(position, dimensions) || color_changed) {
+	const new_rect = new RectangleObj(
+	    position?.x ?? this.x,
+	    position?.y ?? this.y,
+	    this.dx,
+	    this.dy,
+	    this.stroke_color ?? '#000',
+	    dimensions?.width ?? this.width ?? 100,
+	    dimensions?.height ?? this.height ?? 100
+	)
 
-	return new_rect
+	new_rect.id = this.id
+	new_rect.node = this.node
+	new_rect.fill = color ?? this.fill
+
+	return new_rect as this
+
+	}
+	else return null
     }
 }
 
@@ -105,16 +88,20 @@ class LineObj extends Shape {
 	this.points = points
     }
 
-    clone = (color?: string, position?: {x: number, y: number}): LineObj | null => {
-	let new_line = null
-
-	if (position) {
-	    new_line = new LineObj(position.x, position.y, this.stroke_color, this.points)
+    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}): this | null => {
+	if (this.has_changes(position, dimensions) ) {
+	    const new_line = new LineObj(
+		position?.x ?? this.x,
+		position?.y ?? this.y,
+		this.stroke_color ?? '#000',
+		this.points,
+	    )
 	    new_line.id = this.id
-	    if (this.node) new_line.node = this.node
-	}
+	    new_line.node = this.node
 
-	return new_line
+	    return new_line as this
+	}
+	else return null
     }
 }
 

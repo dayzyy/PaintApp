@@ -1,16 +1,17 @@
 import { ToolName } from "./tool.ts"
+import { BaseNode } from "./basenode.ts"
 
-class Stroke {
-    id: string = crypto.randomUUID()
+class Stroke extends BaseNode {
     tool: ToolName
     points: number[]
-    color: string | CanvasGradient
 
-    constructor(tool: ToolName, color: string | CanvasGradient, points: number[]) {
+    constructor(tool: ToolName, stroke_color: string | CanvasGradient, points: number[]) {
+	super(stroke_color)
 	this.tool = tool
 	this.points = points
-	this.color = color
     }
+
+    clone = () => null
 }
 
 export { Stroke }

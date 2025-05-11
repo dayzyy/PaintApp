@@ -1,6 +1,7 @@
 import Konva from 'konva';
 import { Stage, Layer, Circle, Rect, Line, Transformer, Image, Text } from 'react-konva';
 
+import { BaseNode } from '../types/basenode.ts';
 import { Shape, CircleObj, RectangleObj, LineObj } from '../types/shapes.ts';
 import { TempShape } from '../types/shapes.ts';
 import { TextBox } from '../types/textbox.ts';
@@ -23,7 +24,7 @@ import { useCanvasLayers } from '../context/CanvasLayersContext.tsx';
 import { useCanvasNodes } from '../context/CanvasNodesContext.tsx';
 import { useTransformer } from '../context/TransformerContext.tsx';
 
-import { HistoryManager } from '../utils/history/history-manager.ts';
+import { HistoryManager, NewNodeData, ModifiedNodeData } from '../utils/history/history-manager.ts';
 
 type CanvasProps = {
     image: HTMLImageElement | null
@@ -48,7 +49,32 @@ const Canvas = ({image, setImage}: CanvasProps) => {
     const {transformerRef} = useTransformer()
     const editingText = useRef<TextBox | null>(null)
 
-    const nodeDataRef = useRef<any | null>(null)
+    const nodeDataRef = useRef<NewNodeData | ModifiedNodeData | null>(null)
+
+    type FindNodeAndSetter = {
+	node: BaseNode | undefined
+	set_nodes: Dispatch<SetStateAction<BaseNode[]>> | undefined
+    }
+
+    const find_node_and_setter = (konva_node: Konva.Node): FindNodeAndSetter => {
+	let node
+	let set_nodes
+
+	if (konva_node instanceof Konva.Image) {
+	    node = images.find(shape => shape.node?.id() == konva_node.id()) as BaseNode
+	    set_nodes = setImages as Dispatch<SetStateAction<BaseNode[]>>
+	}
+	else if (konva_node instanceof Konva.Text) {
+	    node = texts.find(shape => shape.node?.id() == konva_node.id())
+	    set_nodes = setTexts as Dispatch<SetStateAction<BaseNode[]>>
+	}
+	else if (konva_node instanceof Konva.Shape) {
+	    node = shapes.find(shape => shape.node?.id() == konva_node.id())
+	    set_nodes = setShapes as Dispatch<SetStateAction<BaseNode[]>>
+	}
+
+	return {node, set_nodes}
+    }
 
     const handle_mousedown = (event: CanvasMouseEvent) => {
 	if (tool.name == 'pen' || tool.name == 'eraser' || tool.name == 'brush') {
@@ -78,7 +104,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    change: "add/remove",
 		    operation: "add",
 		    node: new_line,
-		    setNodes: setLines
+		    setNodes: setLines as Dispatch<SetStateAction<BaseNode[]>>
 		})
 	    }
 	} else if (tempShape) {
@@ -95,8 +121,8 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    change: "add/remove",
 		    operation: "add",
 		    node: new_shape,
-		    setNodes: setShapes
-		})
+		    setNodes: setShapes as Dispatch<SetStateAction<BaseNode[]>>
+	 	})
 	    }
 	}
     }
@@ -107,8 +133,11 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 	if (editingText.current) {
 	    editingText.current.delete()
+	    if (editingText.current.node) {
+		transformerRef.current?.nodes([editingText.current.node])
+	    }
 	    editingText.current = null
-	} 
+	}
 	if (tool.name == 'text') {
 	    const new_textbox = add_textbox(event)
 
@@ -119,7 +148,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    change: "add/remove",
 		    operation: "add",
 		    node: new_textbox,
-		    setNodes: setTexts
+		    setNodes: setTexts as Dispatch<SetStateAction<BaseNode[]>>
 		})
 	    }
 	    return
@@ -149,63 +178,43 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 	    const current_node = event.target
 	    if (!current_node) return
-	    console.log('Clicked node', current_node)
 
-	    let node = null
-	    let set_nodes = null
-	    console.log('Node to edit', node)
-
-	    if (current_node instanceof Konva.Image) {
-		node = images.find(shape => shape.node?.id() == current_node.id())
-		set_nodes = setImages
-	    }
-	    else if (current_node instanceof Konva.Text) {
-		node = texts.find(shape => shape.node?.id() == current_node.id())
-		set_nodes = setTexts
-	    }
-	    else if (current_node instanceof Konva.Shape) {
-		node = shapes.find(shape => shape.node?.id() == current_node.id())
-		set_nodes = setShapes
-	    }
+	    const {node, set_nodes} = find_node_and_setter(current_node)
 
 	    if (!node || !set_nodes) return
-	    console.log('Editing', node)
 
 	    nodeDataRef.current = {
-		change: "update",
+		change: "modify",
 		node: node,
-		position: {old: {x: current_node.x(), y: current_node.y()}, new: {x: null, y: null}},
-		setNodes: set_nodes
+		position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
+		setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
 	    }
     }
 
-    const handle_drag_end = (event: CanvasMouseEvent, id: string, setter: Dispatch<SetStateAction<any>>) => {
-	if (nodeDataRef.current?.position) {
+    const handle_drag_end = (event: CanvasMouseEvent, id: string, setter: Dispatch<SetStateAction<BaseNode[]>>) => {
+	const ptr = nodeDataRef.current as ModifiedNodeData
+	if (ptr?.position) {
 	    const current_node = event.target
 	    if (!current_node) return
 
-	    const new_position = {x: current_node.x(), y: current_node.y()}
-	    if (JSON.stringify(new_position) == JSON.stringify(nodeDataRef.current.position.old)) {
+	    ptr.position.new = {x: current_node.x(), y: current_node.y()}
+	    const new_node = ptr.node.clone(undefined, ptr.position.new)
+	    if (!new_node) {
 		nodeDataRef.current = null
 		return
 	    }
 
-	    nodeDataRef.current.position.new = new_position
+	    setter(prev => prev.map(node => node.id == id ? new_node : node))
 
-	    setter(prev => {
-		return (
-		    prev.map(node => {
-			return node.id == id
-			? node.clone(undefined, {x: current_node.x(), y: current_node.y()})
-			: node
-		    })
-		)
-	    })
-
-	    HistoryManager.create_new_node(nodeDataRef.current)
+	    HistoryManager.create_new_node(ptr)
 	    nodeDataRef.current = null
 	    current_node.stopDrag()
 	}
+    }
+
+    const handle_textbox_dbclick = (text: TextBox) => {
+	transformerRef.current?.nodes([])
+	handle_edit_textbox({textbox: text, editingText})
     }
 
     useEffect(() => {
@@ -224,7 +233,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    change: "add/remove",
 		    operation: "add",
 		    node: new_image,
-		    setNodes: setImages
+		    setNodes: setImages as Dispatch<SetStateAction<BaseNode[]>>
 		})
 	    }
 	}
@@ -258,10 +267,10 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    padding={5}
 
 			    onDragStart={(e) => handle_drag_start(e)}
-			    onDragEnd={(e) => handle_drag_end(e, text.id, setTexts)}
+			    onDragEnd={(e) => handle_drag_end(e, text.id, setTexts as Dispatch<SetStateAction<BaseNode[]>>)}
 			    onClick={(e) => handle_shape_click(e)}
 			    draggable
-			    onDblClick={() => handle_edit_textbox({textbox: text, editingText})}
+			    onDblClick={() => handle_textbox_dbclick(text)}
 
 			    onTransformEnd={() => text.handle_resize()}
 			/>
@@ -281,7 +290,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    width={img.width}
 			    height={img.height}
 			    onDragStart={(e) => handle_drag_start(e)}
-			    onDragEnd={(e) => handle_drag_end(e, img.id, setImages)}
+			    onDragEnd={(e) => handle_drag_end(e, img.id, setImages as Dispatch<SetStateAction<BaseNode[]>>)}
 			    onClick={(e) => handle_shape_click(e)}
 			    draggable
 			/>
@@ -294,7 +303,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    return (<Fragment key={index}>
 			<Line
 			    points={line.points}
-			    stroke={line.color}
+			    stroke={line.stroke_color}
 			    strokeWidth={line.tool == 'eraser' ? 10 : (line.tool == 'brush' ? 6 : 2)}
 			    tension={0.5}
 			    lineCap='round'
@@ -304,7 +313,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			{line.tool == 'brush' &&
 			    <Line
 				points={line.points}
-				stroke={line.color}
+				stroke={line.stroke_color}
 				strokeWidth={13}
 				opacity={0.7}
 				tension={0.5}
@@ -334,11 +343,13 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    ref={circle.assign_node}
 				    x={circle.x}
 				    y={circle.y}
+				    width={circle.width}
+				    height={circle.height}
 				    stroke={circle.stroke_color}
 				    fill={circle.fill}
 				    radius={circle.radius}
 				    onDragStart={(e) => handle_drag_start(e)}
-				    onDragEnd={(e) => handle_drag_end(e, circle.id, setShapes)}
+				    onDragEnd={(e) => handle_drag_end(e, circle.id, setShapes as Dispatch<SetStateAction<BaseNode[]>>)}
 				    draggable
 				    onClick={(e) => handle_shape_click(e)}
 				/>
@@ -360,7 +371,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    width={rectangle.width}
 				    height={rectangle.height}
 				    onDragStart={(e) => handle_drag_start(e)}
-				    onDragEnd={(e) => handle_drag_end(e, rectangle.id, setShapes)}
+				    onDragEnd={(e) => handle_drag_end(e, rectangle.id, setShapes as Dispatch<SetStateAction<BaseNode[]>>)}
 				    onClick={(e) => handle_shape_click(e)}
 				    draggable
 				/>
@@ -375,10 +386,12 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    ref={line.assign_node}
 				    x={line.x}
 				    y={line.y}
+				    width={line.width}
+				    height={line.height}
 				    stroke={line.stroke_color}
 				    points={line.points}
 				    onDragStart={(e) => handle_drag_start(e)}
-				    onDragEnd={(e) => handle_drag_end(e, line.id, setShapes)}
+				    onDragEnd={(e) => handle_drag_end(e, line.id, setShapes as Dispatch<SetStateAction<BaseNode[]>>)}
 				    onClick={(e) => handle_shape_click(e)}
 				    draggable
 				/>
@@ -391,7 +404,21 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 		    tool.name == 'select' &&
 		    <Transformer
 			ref={transformerRef}
-			onTransformStart={() => {
+			onTransformStart={(e) => {
+			    const current_node = e.target
+			    if (!current_node) return
+
+			    const {node, set_nodes} = find_node_and_setter(current_node)
+
+			    if (!node || !set_nodes) return
+
+			    nodeDataRef.current = {
+				change: "modify",
+				node: node,
+				dimensions: {old: {width: current_node.width(), height: current_node.height()}, new: undefined},
+				position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
+				setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
+			    }
 			}}
 			onTransform={(e) => {
 			    const node = e.target
@@ -400,13 +427,30 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 			    if (node instanceof Konva.Line) return
 				
-			    else if (node instanceof Konva.Rect || node instanceof Konva.Image || node instanceof Konva.Circle) {
-				node.width(node.width() * scaleX)
-				node.height(node.height() * scaleY)
-			    }
+			    node.width(node.width() * scaleX)
+			    node.height(node.height() * scaleY)
 
 			    node.scaleX(1)
 			    node.scaleY(1)
+			}}
+			onTransformEnd={(e) => {
+			    const current_node = e.target
+			    if (!current_node) return
+
+			    const ptr = nodeDataRef.current as ModifiedNodeData
+
+			    if (ptr) {
+				ptr.dimensions!.new = {width: current_node.width(), height: current_node.height()}
+				ptr.position!.new = {x: current_node.x(), y: current_node.y()}
+				ptr.setNodes(prev => prev.map(node => {
+				    if (node.id == ptr.node.id) {
+					const new_node = node.clone(undefined, ptr.position!.new, ptr.dimensions!.new)
+					return new_node ? new_node : node
+				    } else return node
+				}))
+				HistoryManager.create_new_node(ptr)
+				nodeDataRef.current = null
+			    }
 			}}
 		    />
 		}

@@ -1,8 +1,9 @@
 import Konva from "konva"
-import React, { RefObject, SetStateAction } from "react"
+import React, { Dispatch, RefObject, SetStateAction } from "react"
 import { CanvasMouseEvent } from "../../types/events"
 import { Shape } from "../../types/shapes.ts"
 import { HistoryManager } from "../history/history-manager.ts"
+import { BaseNode } from "../../types/basenode.ts"
 
 type PickColorProps = {
     event: CanvasMouseEvent
@@ -48,12 +49,13 @@ const fill_shape = ({event, color, setter}: FillShapeProps) => {
 	setter(prev => prev.map(shape => {
 	    if (shape.node == node) {
 		const new_shape = shape.clone(color)
+		if (!new_shape) return shape
 
 		HistoryManager.create_new_node({
-		    change: 'update',
+		    change: 'modify',
 		    node: new_shape,
 		    fillColor: {old: shape.fill, new: color},
-		    setNodes: setter
+		    setNodes: setter as Dispatch<SetStateAction<BaseNode[]>>
 		})
 		return new_shape
 	    }

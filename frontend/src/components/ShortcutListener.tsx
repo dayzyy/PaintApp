@@ -76,8 +76,6 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 
 	    setShapes(prev => prev.filter(shape => shape.node !== selectedNode))
 
-	    console.log(toRemove);
-
 	    HistoryManager.create_new_node({
 		change: "add/remove",
 		operation: "remove",
@@ -106,7 +104,6 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 	SHORTCUTS['L'] = { alias: 'Alt + l', destination: 'line', fire: () => set_tool('line') }
 	SHORTCUTS['T'] = { alias: 'Alt + t', destination: 'text', fire: () => set_tool('text') }
 	SHORTCUTS['Delete'] = { alias: 'Del', destination: 'node', fire: () => delete_node()}
-	SHORTCUTS['Backspace'] = { alias: 'Back', destination: 'node', fire: () => delete_node()}
 	SHORTCUTS['Z'] = { alias: 'Ctrl + z', destination: 'undo', fire: () => HistoryManager.undo()}
 	SHORTCUTS['X'] = { alias: 'Ctrl + x', destination: 'redo', fire: () => HistoryManager.redo()}
     }, [])
@@ -117,7 +114,7 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
 		event.preventDefault()
 		SHORTCUTS['Escape'].fire()
 		return
-	    } else if (event.key == 'Delete' || event.key == 'Backspace') {
+	    } else if (event.key == 'Delete') {
 		event.preventDefault()
 		SHORTCUTS['Delete'].fire()
 		return

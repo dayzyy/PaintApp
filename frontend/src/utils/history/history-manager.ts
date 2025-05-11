@@ -1,68 +1,44 @@
 import { Dispatch, SetStateAction } from "react"
-import { Shape } from "../../types/shapes.ts"
-import { TextBox } from "../../types/textbox"
-import { ImageObj } from "../../types/image"
-import { Stroke } from "../../types/stroke.ts"
+import { BaseNode } from "../../types/basenode.ts"
 
-type NodeData = 
-    {
-	change: "add/remove"
-	operation: "add" | "remove"
-	node: Shape | TextBox | ImageObj | Stroke
-	setNodes:
-	    Dispatch<SetStateAction<Shape[]>> |
-	    Dispatch<SetStateAction<TextBox[]>> |
-	    Dispatch<SetStateAction<ImageObj[]>> |
-	    Dispatch<SetStateAction<Stroke[]>>
+type NodeData = {
+	change: "add/remove" | "modify"
+	node: BaseNode
+	setNodes: Dispatch<SetStateAction<BaseNode[]>>
     }
 
-    |
+type NewNodeData = NodeData & {
+    change: "add/remove"
+    operation: "add" | "remove"
+}
 
-    {
-	change: "update"
-	node: Shape | TextBox | ImageObj
+type ModifiedNodeData = NodeData & {
+    change: "modify"
 
-	dimensions?: {
-	    old: number[] 
-	    new: number[]
-	}
-
-	fillColor?: {
-	    old: string
-	    new: string
-	}
-
-	strokeColor?: {
-	    old: string
-	    new: string
-	}
-
-	position?: {
-	    old: {
-		x: number
-		y: number
-	    }
-	    new: {
-		x: number
-		y: number
-	    }
-	}
-
-	setNodes:
-	    Dispatch<SetStateAction<Shape[]>> |
-	    Dispatch<SetStateAction<TextBox[]>> |
-	    Dispatch<SetStateAction<ImageObj[]>> |
-	    Dispatch<SetStateAction<Stroke[]>>
+    dimensions?: {
+	old?: {width: number, height: number}
+	new?: {width: number, height: number}
     }
+
+    fillColor?: {
+	old?: string
+	new?: string
+    }
+
+    position?: {
+	old?: {x: number, y: number}
+	new?: {x: number, y: number}
+    }
+}
 
 type HistoryNodeProps = {
-    data: NodeData
+    data: NewNodeData | ModifiedNodeData
 }
 
 class HistoryNode {
     next: HistoryNode | null = null
     prev: HistoryNode | null = null
-    data: NodeData
+    data: NewNodeData | ModifiedNodeData
 
     constructor({data}: HistoryNodeProps) {
 	this.data = data
@@ -78,8 +54,7 @@ class HistoryManager {
     static shell: HistoryNode = new HistoryNode({data: {change: "add/remove", operation: "add", node: {} as any, setNodes: () => {}}}) // the node that will always be behind the tail, to make the tail node redoable
 
 
-    static create_new_node = (data: NodeData) => {
-	console.log('New node created!')
+    static create_new_node = (data: NewNodeData | ModifiedNodeData) => {
 	const new_node = new HistoryNode({data})
 
 	if (this.node_count == this.max_nodes) {
@@ -101,89 +76,58 @@ class HistoryManager {
 	this.node_count += 1
     }
 
-    static undo = () => {
-	if (!this.head || this.head == this.shell) return
+    static apply_changes = (undo: boolean) => {
+	if (!this.head) return // Cancel if head node doesnt exist
+	if (undo && this.head == this.shell) return // Cancel if undo is attempted on the shell node
+	if (!undo && !this.head.next) return // Cancle if redo is attempted on a node wich is not linked to any forward nodes
+	if (!undo) this.head = this.head.next // Jump to the next node right away, if we are re-doing
 
-	const head_node = this.head
-
-	if (head_node.data.change === "add/remove") {
-	    if (head_node.data.operation === "add") {
-		head_node.data.setNodes(prev => prev.filter(n => n.id != head_node.data.node.id))
-	    }
-	    else if (head_node.data.operation === "remove") {
-		head_node.data.setNodes(prev => [...prev, head_node.data.node])
-	    }
-	}
-	else if (head_node.data.change === "update") {
-	    if (head_node.data.position) {
-		head_node.data.setNodes(prev => {
-		    return (
-			prev.map(node => {
-			    return node.id == head_node.data.node.id
-			    ? head_node.data.node.clone(undefined, head_node.data.position.old)
-			    : node
-			})
-		    )
-		})
-	    }
-	    else if (head_node.data.fillColor) {
-		console.log('Reverting a color update')
-		head_node.data.setNodes(prev => {
-		    return (
-			prev.map(node => {
-			    return node.id == head_node.data.node.id
-			    ? head_node.data.node.clone(head_node.data.fillColor.old)
-			    : node
-			})
-		    )
-		})
-	    }
-	}
-
-	if (this.head.prev) {
-	    this.head = this.head.prev
-	}
-    }
-
-    static redo = () => {
-	if (!this.head || !this.head.next) return
-
-	this.head = this.head.next
-	const head_node = this.head
+	const head_node = this.head!
 
 	if (head_node.data.change === "add/remove") {
 	    if (head_node.data.operation === "add") {
-		head_node.data.setNodes(prev => [...prev, head_node.data.node])
+		undo
+		? head_node.data.setNodes(prev => prev.filter(n => n.id != head_node.data.node.id))
+		: head_node.data.setNodes(prev => [...prev, head_node.data.node])
 	    }
 	    else if (head_node.data.operation === "remove") {
-		head_node.data.setNodes(prev => prev.filter(n => n.id != head_node.data.node.id))
+		undo
+		? head_node.data.setNodes(prev => [...prev, head_node.data.node])
+		: head_node.data.setNodes(prev => prev.filter(n => n.id != head_node.data.node.id))
 	    }
+	} // Case where a node was added/removed from the canvas
+
+	else if (head_node.data.change === "modify") {
+	    const data = head_node.data as ModifiedNodeData
+
+	    data.setNodes(prev => {
+		const current_node = prev.find(node => node.id == data.node.id)
+		if (!current_node) return prev
+
+		let new_node: BaseNode | null = null
+
+		if (data.position) {
+		    new_node = current_node.clone(undefined, undo ? data.position!.old : data.position!.new)
+		} // Node was dragged, its positioned changed
+
+		 if (data.dimensions) {
+		    new_node = current_node.clone(undefined, undefined, undo ? data.dimensions.old : data.dimensions.new)
+		} // Node was resized, its dimensions were changed
+
+		else if (data.fillColor) {
+		    new_node = current_node.clone(undo ? data.fillColor.old : data.fillColor.new)
+		} // Node's color changed
+
+		if (!new_node) return prev
+		else return prev.map(node => node.id == new_node.id ? new_node : node)
+	    })
 	}
-	else if (head_node.data.change === "update") {
-	    if (head_node.data.position) {
-		head_node.data.setNodes(prev => {
-		    return (
-			prev.map(node => {
-			    return node.id == head_node.data.node.id
-			    ? head_node.data.node.clone(undefined, head_node.data.position.new)
-			    : node
-			})
-		    )
-		})
-	    }
-	    else if (head_node.data.fillColor) {
-		head_node.data.setNodes(prev => {
-		    return (
-			prev.map(node => {
-			    return node.id == head_node.data.node.id
-			    ? head_node.data.node.clone(head_node.data.fillColor.new)
-			    : node
-			})
-		    )
-		})
-	    }
-	}
+
+	if (undo) this.head = this.head!.prev
     }
+
+    static undo = () => this.apply_changes(true)
+    static redo = () => this.apply_changes(false)
 }
 
-export { HistoryManager }
+export { HistoryManager, type NewNodeData, type ModifiedNodeData }
