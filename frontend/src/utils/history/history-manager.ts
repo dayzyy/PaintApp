@@ -16,8 +16,13 @@ type ModifiedNodeData = NodeData & {
     change: "modify"
 
     dimensions?: {
-	old?: {width: number, height: number}
-	new?: {width: number, height: number}
+	old?: {width?: number, height?: number, radius?: number}
+	new?: {width?: number, height?: number, radius?: number}
+    }
+
+    scale?: {
+	old?: {x: number, y: number}
+	new?: {x: number, y: number}
     }
 
     fillColor?: {
@@ -110,8 +115,12 @@ class HistoryManager {
 		    new_node = current_node.clone(undefined, undo ? data.position!.old : data.position!.new)
 		} // Node was dragged, its positioned changed
 
-		 if (data.dimensions) {
+		if (data.dimensions) {
 		    new_node = current_node.clone(undefined, undefined, undo ? data.dimensions.old : data.dimensions.new)
+		} // Node was resized, its dimensions were changed
+
+		if (data.scale) {
+		    new_node = current_node.clone(undefined, undefined, undefined, undo ? data.scale.old : data.scale.new)
 		} // Node was resized, its dimensions were changed
 
 		else if (data.fillColor) {

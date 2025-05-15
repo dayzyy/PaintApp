@@ -241,6 +241,10 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 	setImage(null)
     }, [image])
 
+    useEffect(() => {
+	console.log(lines)
+    }, [lines])
+
     return ( 
 	<Stage
 	    ref={stageRef}
@@ -343,8 +347,6 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    ref={circle.assign_node}
 				    x={circle.x}
 				    y={circle.y}
-				    width={circle.width}
-				    height={circle.height}
 				    stroke={circle.stroke_color}
 				    fill={circle.fill}
 				    radius={circle.radius}
@@ -386,8 +388,8 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 				    ref={line.assign_node}
 				    x={line.x}
 				    y={line.y}
-				    width={line.width}
-				    height={line.height}
+				    scaleX={line.scaleX}
+				    scaleY={line.scaleY}
 				    stroke={line.stroke_color}
 				    points={line.points}
 				    onDragStart={(e) => handle_drag_start(e)}
@@ -412,13 +414,35 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 			    if (!node || !set_nodes) return
 
-			    nodeDataRef.current = {
-				change: "modify",
-				node: node,
-				dimensions: {old: {width: current_node.width(), height: current_node.height()}, new: undefined},
-				position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
-				setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
+			    if (node instanceof CircleObj) {
+				transformerRef.current?.centeredScaling(true)
+				nodeDataRef.current = {
+				    change: "modify",
+				    node: node,
+				    dimensions: {old: {radius: node.radius}, new: undefined},
+				    position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
+				    setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
+				}
+			    } 
+			    else if (node instanceof LineObj) {
+				nodeDataRef.current = {
+				    change: "modify",
+				    node: node,
+				    position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
+				    scale: {old: {x: current_node.scaleX(), y: current_node.scaleY()}, new: undefined},
+				    setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
+				}
 			    }
+			    else {
+				nodeDataRef.current = {
+				    change: "modify",
+				    node: node,
+				    dimensions: {old: {width: current_node.width(), height: current_node.height()}, new: undefined},
+				    position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
+				    setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
+				}
+			    }
+
 			}}
 			onTransform={(e) => {
 			    const node = e.target
@@ -426,7 +450,7 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    const scaleY = node.scaleY()
 
 			    if (node instanceof Konva.Line) return
-				
+
 			    node.width(node.width() * scaleX)
 			    node.height(node.height() * scaleY)
 
@@ -440,11 +464,19 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 			    const ptr = nodeDataRef.current as ModifiedNodeData
 
 			    if (ptr) {
-				ptr.dimensions!.new = {width: current_node.width(), height: current_node.height()}
+				if (current_node instanceof Konva.Circle) {
+				    ptr.dimensions!.new = {radius: current_node.radius()}
+				    transformerRef.current?.centeredScaling(false)
+				}
+				else if (current_node instanceof Konva.Line) {
+				    ptr.scale!.new = {x: current_node.scaleX(), y: current_node.scaleY()}
+				}
+				else ptr.dimensions!.new = {width: current_node.width(), height: current_node.height()}
+
 				ptr.position!.new = {x: current_node.x(), y: current_node.y()}
 				ptr.setNodes(prev => prev.map(node => {
 				    if (node.id == ptr.node.id) {
-					const new_node = node.clone(undefined, ptr.position!.new, ptr.dimensions!.new)
+					const new_node = node.clone(undefined, ptr.position!.new, ptr.dimensions?.new, ptr.scale?.new)
 					return new_node ? new_node : node
 				    } else return node
 				}))

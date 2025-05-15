@@ -7,8 +7,8 @@ abstract class Shape extends PositionedNode {
     abstract type: ShapeType
     fill: string = 'transparent'
 
-    constructor(x: number, y: number, stroke_color: string | CanvasGradient, width?: number, height?: number) {
-	super(x, y, stroke_color, width, height)
+    constructor(x: number, y: number, stroke_color: string | CanvasGradient, width?: number, height?: number, scaleX?: number, scaleY?: number) {
+	super(x, y, stroke_color, width, height, scaleX, scaleY)
     }
 }
 
@@ -16,22 +16,20 @@ class CircleObj extends Shape  {
     type: ShapeType = 'circle'
     radius
 
-    constructor(x: number, y: number, stroke_color: string | CanvasGradient, radius: number, width?: number, height?: number) {
-	super(x, y, stroke_color, width, height)
+    constructor(x: number, y: number, stroke_color: string | CanvasGradient, radius: number) {
+	super(x, y, stroke_color)
 	this.radius = radius
     }
 
-    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}): this | null => {
+    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {radius: number}): this | null => {
 	const color_changed = color != undefined && color != this.fill
 	
-	if (this.has_changes(position, dimensions) || color_changed) {
+	if (this.has_changes(position) || color_changed || dimensions?.radius != this.radius) {
 	    const new_circle = new CircleObj(
 		position?.x ?? this.x,
 		position?.y ?? this.y,
 		this.stroke_color ?? '#000',
-		this.radius,
-		dimensions?.width ?? undefined,
-		dimensions?.height ?? undefined
+		dimensions?.radius ?? this.radius,
 	    )
 	    new_circle.id = this.id
 	    new_circle.node = this.node
@@ -83,18 +81,20 @@ class LineObj extends Shape {
     type: ShapeType = 'line'
     points: number[]
 
-    constructor(x: number, y: number, stroke_color: string | CanvasGradient, points: number[]) {
-	super(x, y, stroke_color)
+    constructor(x: number, y: number, stroke_color: string | CanvasGradient, points: number[], scaleX?: number, scaleY?: number) {
+	super(x, y, stroke_color, undefined, undefined, scaleX ?? 1, scaleY ?? 1)
 	this.points = points
     }
 
-    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}): this | null => {
-	if (this.has_changes(position, dimensions) ) {
+    clone = (color?: string, position?: {x: number, y: number}, dimensions?: {width: number, height: number}, scale?: {x: number, y: number}): this | null => {
+	if (this.has_changes(position) || this.scaleX != scale?.x || this.scaleY != scale?.y) {
 	    const new_line = new LineObj(
 		position?.x ?? this.x,
 		position?.y ?? this.y,
 		this.stroke_color ?? '#000',
 		this.points,
+		scale?.x ?? this.scaleX,
+		scale?.y ?? this.scaleY
 	    )
 	    new_line.id = this.id
 	    new_line.node = this.node
