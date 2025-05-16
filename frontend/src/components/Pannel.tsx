@@ -1,7 +1,7 @@
 import React from "react";
 import { useResolution } from "../context/ResolutionContext";
 import { useCanvasLayers } from "../context/CanvasLayersContext.tsx";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { IoMdClose } from "react-icons/io";
@@ -28,7 +28,7 @@ type PannelProps = {
 const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
     const { color, setColor } = useColor()
     const { layers } = useCanvasLayers()
-    const { setShapes, setLines, setImages, setTexts } = useCanvasNodes()
+    const { lines, shapes, images, texts } = useCanvasNodes()
 
     const {tool, setTool} = useTool()
     const sliced_tools = useRef<Tool[][]>([])
@@ -47,7 +47,7 @@ const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
 
     const { mobileViewport } = useResolution()
 
-    useEffect(() => {
+    React.useEffect(() => {
 	return () => {
 	    clearTimeout(toggle_timer.current)
 	    clearTimeout(block_content_timer.current)
@@ -94,10 +94,10 @@ const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
 	for (let layer of layers) {
 	    layer.current?.destroyChildren()
 	}
-	setShapes([])
-	setLines([])
-	setImages([])
-	setTexts([])
+	lines.current = []
+	shapes.current = []
+	images.current = []
+	texts.current = []
     }
 
     const split_tools = () => {

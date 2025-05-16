@@ -1,43 +1,31 @@
-import { useContext, RefObject, ReactNode, useRef, createContext } from "react";
 import Konva from "konva";
+import { RefObject, useRef } from "react";
+import React from "react";
 
 type CanvasLayersContextType = {
-    linesLayerRef: RefObject<Konva.Layer | null>
-    shapesLayerRef: RefObject<Konva.Layer | null>
-    tempShapeLayerRef: RefObject<Konva.Layer | null>
-    tempLineLayerRef: RefObject<Konva.Layer | null>
-    imagesLayerRef: RefObject<Konva.Layer | null>
-    textsLayerRef: RefObject<Konva.Layer | null>
+    mainLayer: RefObject<Konva.Layer | null>
+    lineLayer: RefObject<Konva.Layer | null>
+    tempLayer: RefObject<Konva.Layer | null>
     layers: RefObject<Konva.Layer | null>[]
 }
 
-const CanvasLayersContext = createContext<CanvasLayersContextType | null>(null)
+const CanvasLayersContext = React.createContext<CanvasLayersContextType | null>(null)
 
-const CanvasLayersProvider = ({children}: {children: ReactNode}) => {
-    const linesLayerRef = useRef<Konva.Layer | null>(null)
-    const shapesLayerRef = useRef<Konva.Layer | null>(null)
-    const tempShapeLayerRef = useRef<Konva.Layer | null>(null)
-    const tempLineLayerRef = useRef<Konva.Layer | null>(null)
-    const imagesLayerRef = useRef<Konva.Layer | null>(null)
-    const textsLayerRef = useRef<Konva.Layer | null>(null)
-    const layers = [linesLayerRef, shapesLayerRef, tempShapeLayerRef, tempLineLayerRef, imagesLayerRef, textsLayerRef]
+const CanvasLayersProvider = ({children}: {children: React.ReactNode}) => {
+    const mainLayer = useRef<Konva.Layer | null>(null)
+    const lineLayer = useRef<Konva.Layer | null>(null)
+    const tempLayer = useRef<Konva.Layer | null>(null)
+    const layers = [lineLayer, tempLayer, mainLayer]
 
     return (
-	<CanvasLayersContext.Provider 
-	    value={{
-		    linesLayerRef, shapesLayerRef,
-		    tempShapeLayerRef, tempLineLayerRef,
-		    imagesLayerRef, textsLayerRef,
-		    layers
-	        }}
-	>
+	<CanvasLayersContext.Provider value={{mainLayer, lineLayer, tempLayer, layers}}>
 	    {children}
 	</CanvasLayersContext.Provider>
     )
 }
 
 const useCanvasLayers = () => {
-    const context = useContext(CanvasLayersContext)
+    const context = React.useContext(CanvasLayersContext)
 
     if (!context) {
 	throw new Error('useCanvasLayers must be used within a CanvasLayersContext.Provider')

@@ -1,63 +1,31 @@
-import { useContext, ReactNode, useState, createContext, useEffect, useRef, RefObject } from "react";
+import Konva from "konva";
 import React from "react";
-
-import { Stroke } from "../types/stroke";
-import { Shape } from "../types/shapes";
-import { ImageObj } from "../types/image";
-import { TextBox } from "../types/textbox";
+import { useRef, RefObject } from "react";
 
 type CanvasNodesContextType = {
-    shapes: Shape[]
-    lines: Stroke[]
-    images: ImageObj[]
-    texts: TextBox[]
-    setShapes: React.Dispatch<React.SetStateAction<Shape[]>>
-    setLines: React.Dispatch<React.SetStateAction<Stroke[]>>
-    setImages: React.Dispatch<React.SetStateAction<ImageObj[]>>
-    setTexts: React.Dispatch<React.SetStateAction<TextBox[]>>
-    shapesRef: RefObject<Shape[]>
-    imagesRef: RefObject<ImageObj[]>
-    textsRef: RefObject<TextBox[]>
+    lines: RefObject<Konva.Line[]>
+    shapes: RefObject<Konva.Shape[]>
+    images: RefObject<Konva.Image[]>
+    texts: RefObject<Konva.Text[]>
 }
 
-const CanvasNodesContext = createContext<CanvasNodesContextType | null>(null)
+const CanvasNodesContext = React.createContext<CanvasNodesContextType | null>(null)
 
-const CanvasNodesProvider = ({children}: {children: ReactNode}) => {
-    const [lines, setLines] = useState<Stroke[]>([])
-    const [shapes, setShapes] = useState<Shape[]>([])
-    const [images, setImages] = useState<ImageObj[]>([])
-    const [texts, setTexts] = useState<TextBox[]>([])
-    const shapesRef = useRef<Shape[]>([])
-    const imagesRef = useRef<ImageObj[]>([])
-    const textsRef = useRef<TextBox[]>([])
-
-    useEffect(() => {
-	shapesRef.current = shapes
-    }, [shapes])
-    useEffect(() => {
-	imagesRef.current = images
-    }, [images])
-    useEffect(() => {
-	textsRef.current = texts
-    }, [texts])
+const CanvasNodesProvider = ({children}: {children: React.ReactNode}) => {
+    const lines = useRef<Konva.Line[]>([])
+    const shapes = useRef<Konva.Shape[]>([])
+    const images = useRef<Konva.Image[]>([])
+    const texts = useRef<Konva.Text[]>([])
 
     return (
-	<CanvasNodesContext.Provider 
-	    value={{
-		    lines, shapes,
-		    images, texts,
-		    setLines, setShapes,
-		    setImages, setTexts,
-		    textsRef, imagesRef, shapesRef
-	        }}
-	>
+	<CanvasNodesContext.Provider value={{lines, shapes, images, texts}}>
 	    {children}
 	</CanvasNodesContext.Provider>
     )
 }
 
 const useCanvasNodes = () => {
-    const context = useContext(CanvasNodesContext)
+    const context = React.useContext(CanvasNodesContext)
 
     if (!context) {
 	throw new Error('useCanvasNodes must be used within a CanvasNodesContext.Provider')
