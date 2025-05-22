@@ -1,10 +1,10 @@
 import Konva from "konva"
 import { RefObject } from "react"
-import { CanvasMouseEvent } from "../../types/events.ts"
+import { CanvasMouseEvent } from "./mouse-events.ts"
 import { ToolName } from "../../types/tool.ts"
+import { shapeManager } from "../nodes/NodeManager.ts"
 
-type DrawShapePreviewProps = {
-    event: CanvasMouseEvent
+type DrawShapePreviewProps = CanvasMouseEvent & {
     tool_name: ToolName
     color: string | CanvasGradient
     tempShape: RefObject<Konva.Shape | null>
@@ -12,6 +12,7 @@ type DrawShapePreviewProps = {
 }
 
 const draw_shape_preview = ({event, tool_name, color, tempShape, tempLayer}: DrawShapePreviewProps) => {
+    tempShape.current = null
     if (tool_name == 'circle') {
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (!pos) return
@@ -38,8 +39,7 @@ const draw_shape_preview = ({event, tool_name, color, tempShape, tempLayer}: Dra
     }
 }
 
-type ResizeShapePreviewProps = {
-    event: CanvasMouseEvent
+type ResizeShapePreviewProps = CanvasMouseEvent & {
     tempShape: RefObject<Konva.Shape | null>
     tempLayer: RefObject<Konva.Layer | null>
     animationFrameID: RefObject<number | null>
@@ -48,12 +48,11 @@ type ResizeShapePreviewProps = {
 const resize_shape_preview = ({event, tempShape, tempLayer, animationFrameID}: ResizeShapePreviewProps) => {
     if (animationFrameID.current || !tempShape.current) return
 
-    animationFrameID.current = requestAnimationFrame(() => {
-	const shape = tempShape.current
-	if (!shape) return
+    const shape = tempShape.current
+    const pos = event.target.getStage()?.getPointerPosition()
+    if (!shape || !pos) return
 
-	const pos = event.target.getStage()?.getPointerPosition()
-	if (!pos) return
+    animationFrameID.current = requestAnimationFrame(() => {
 
 	const dx = pos.x - shape.x()
 	const dy = pos.y - shape.y()
@@ -92,18 +91,20 @@ const resize_shape_preview = ({event, tempShape, tempLayer, animationFrameID}: R
 type CommitShapePreviewProps = {
     tempShape: RefObject<Konva.Shape | null>
     tempLayer: RefObject<Konva.Layer | null>
-    mainLayer: RefObject<Konva.Layer | null>
-    shapes: RefObject<Konva.Shape[]>
+    animationFrameID: RefObject<number | null>
 }
 
-const commit_shape_preview = ({tempShape, mainLayer, tempLayer, shapes}: CommitShapePreviewProps) => {
+const commit_shape_preview = ({tempShape, tempLayer, animationFrameID}: CommitShapePreviewProps) => {
+    if (animationFrameID.current) {
+	cancelAnimationFrame(animationFrameID.current)
+	animationFrameID.current = null
+    }
+
     const shape = tempShape.current
     if (!shape) return null
 
-    mainLayer.current?.add(shape)
-    shapes.current.push(shape)
-
     tempLayer.current?.removeChildren()
+    shapeManager.add(shape)
     tempShape.current = null
 }
 

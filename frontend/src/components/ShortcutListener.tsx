@@ -5,10 +5,9 @@ import { TOOLS } from "../constants/tools"
 import { ToolName } from "../types/tool"
 
 import { useTool } from "../context/ToolContext"
-import { useCanvasNodes } from "../context/CanvasNodesContext"
-import { useTransformer } from "../context/TransformerContext"
 
 import { HistoryManager } from "../utils/history/history-manager"
+import { shapeManager, textManager, imageManager } from "../utils/nodes/NodeManager"
 
 type ShortcutListenerProps = {
     toggle_pannel: () => void
@@ -32,8 +31,6 @@ const SHORTCUTS: ShortcutMap = {} as ShortcutMap
 
 const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     const { setTool } = useTool()
-    const { setShapes, setImages, setTexts, shapesRef, imagesRef, textsRef } = useCanvasNodes()
-    const {transformerRef} = useTransformer()
 
     const set_tool = (tool_name: ToolName) => {
 	const new_tool = TOOLS.find((tool) => tool.name == tool_name)
@@ -41,50 +38,15 @@ const ShortcutListener = ({toggle_pannel}: ShortcutListenerProps) => {
     }
 
     const delete_node = () => {
-	if (!transformerRef.current || transformerRef.current.nodes().length == 0) return
-	let selectedNode = transformerRef.current.nodes()[0]
-
-	if (selectedNode instanceof Konva.Image) {
-	    const toRemove = imagesRef.current.find(image => image.node === selectedNode)
-	    if (!toRemove) return;
-
-	    setImages(prev => prev.filter(image => image.node !== selectedNode))
-
-	    HistoryManager.create_new_node({
-		change: "add/remove",
-		operation: "remove",
-		node: toRemove,
-		setNodes: setImages
-	    })
-	}
-	else if (selectedNode instanceof Konva.Text) {
-	    const toRemove = textsRef.current.find(tb => tb.node === selectedNode);
-	    if (!toRemove) return;
-
-	    setTexts(prev => prev.filter(tb => tb.node !== selectedNode))
-
-	    HistoryManager.create_new_node({
-		change: "add/remove",
-		operation: "remove",
-		node: toRemove,
-		setNodes: setTexts
-	    })
-	}
-	else if (selectedNode instanceof Konva.Shape) {
-	    const toRemove = shapesRef.current.find(shape => shape.node === selectedNode);
-	    if (!toRemove) return;
-
-	    setShapes(prev => prev.filter(shape => shape.node !== selectedNode))
-
-	    HistoryManager.create_new_node({
-		change: "add/remove",
-		operation: "remove",
-		node: toRemove,
-		setNodes: setShapes
-	    })
-	}
-
-	transformerRef.current.nodes([])
+	const selected_nodes = HistoryManager.transformerRef?.current?.nodes()
+	if (!selected_nodes || selected_nodes.length < 1) return
+	
+	const node = selected_nodes[0] as Konva.Node
+	if (node instanceof Konva.Image) imageManager.remove(node)
+	else if (node instanceof Konva.Text) textManager.remove(node)
+	else if (node instanceof Konva.Shape) shapeManager.remove(node)
+	node.remove()
+	HistoryManager.transformerRef?.current?.nodes([])
     }
 
     const isKeyStroke = (key: string): key is KeyStroke => {

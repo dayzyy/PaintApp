@@ -14,10 +14,14 @@ import ShortcutListener from './components/ShortcutListener.tsx';
 import { FaExclamationCircle } from "react-icons/fa";
 
 const App = () => {
+    //const renderCounterRef = useRef<number>(0)
+    //console.log(`APP render #${renderCounterRef.current}`)
+    //renderCounterRef.current += 1
+
     const [theme, setTheme] = useTheme()
     const { mobileViewport } = useResolution()
 
-    const { tool, setTool } = useTool()
+    const { tool } = useTool()
 
     const [showAlert, setShowAlert] = useState(false)
     const [showPannel, setShowPannel] = useState(true)
@@ -79,10 +83,9 @@ const App = () => {
 	    <Pannel
 		is_shown={showPannel}
 		toggle_off={() => setShowPannel(false)}
-		add_image={(event) => handle_image_change(event)}
 	    />
 
-	    <Canvas image={image} setImage={setImage}/>
+	    <Canvas/>
 	</main>
     )
 }

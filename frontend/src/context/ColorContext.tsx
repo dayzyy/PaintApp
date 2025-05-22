@@ -1,14 +1,14 @@
-import { createContext, ReactNode, useContext, useState } from "react";
+import React from "react"
 
 type ColorContextType = {
     color: string
-    setColor: (color: string) => void
+    setColor: React.Dispatch<React.SetStateAction<string>>
 }
 
-const ColorContext = createContext<ColorContextType | null>(null)
+const ColorContext = React.createContext<ColorContextType | null>(null)
 
-const ColorProvider = ({children}: {children: ReactNode}) => {
-    const [color, setColor] = useState('#000')
+const ColorProvider = ({children}: {children: React.ReactNode}) => {
+    const [color, setColor] = React.useState('#000')
     
     return (
 	<ColorContext.Provider value={{color, setColor}}>
@@ -18,7 +18,7 @@ const ColorProvider = ({children}: {children: ReactNode}) => {
 }
 
 const useColor = () => {
-    const context = useContext(ColorContext)
+    const context = React.useContext(ColorContext)
 
     if (!context) {
 	throw new Error('useColor must be use within a ColorProvider')

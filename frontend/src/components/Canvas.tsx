@@ -1,309 +1,75 @@
+import React, { useRef } from 'react';
 import Konva from 'konva';
-import { Stage, Layer } from 'react-konva';
+import { Stage, Layer, Transformer } from 'react-konva';
 
-import { BaseNode } from '../types/basenode.ts';
-import { TextBox } from '../types/textbox.ts';
 
-import { CanvasMouseEvent } from '../types/events.ts'
-
-import { useRef, useEffect, Dispatch, SetStateAction } from 'react';
-
-import { pick_color, fill_shape } from '../utils/canvas/color-interactions.tsx';
-import { start_draw, draw, stop_draw } from '../utils/canvas/free-hand-drawing.tsx';
-import { draw_shape_preview, resize_shape_preview, commit_shape_preview } from "../utils/canvas/shape-drawing.tsx"
-import { add_textbox, handle_edit_textbox } from '../utils/canvas/textbox-drawing.tsx';
+import { handle_mousedown, handle_mousemove, handle_mouseup, handle_canvas_click } from '../utils/canvas/mouse-events.ts';
+import { handle_node_transform_start, handle_node_transform, handle_node_transform_end } from '../utils/canvas/node-interactions.ts';
 
 import { useColor } from '../context/ColorContext';
 import { useTool } from '../context/ToolContext';
-import { useCanvasLayers } from '../context/CanvasLayersContext.tsx';
-import { useCanvasNodes } from '../context/CanvasNodesContext.tsx';
-import { useTransformer } from '../context/TransformerContext.tsx';
 
-import { HistoryManager, NewNodeData, ModifiedNodeData } from '../utils/history/history-manager.ts';
+import { NewNodeData, ModifiedNodeData } from '../utils/history/history-manager.ts';
+import { HistoryManager } from '../utils/history/history-manager.ts';
+import { shapeManager, imageManager, textManager, lineManager } from '../utils/nodes/NodeManager.ts';
 
-type CanvasProps = {
-    image: HTMLImageElement | null
-    setImage: Dispatch<SetStateAction<HTMLImageElement | null>>
-}
+const Canvas = () => {
+    //const renderCounterRef = useRef<number>(0)
+    //console.log(`CANVAS render #${renderCounterRef.current}`)
+    //renderCounterRef.current += 1
 
-const Canvas = ({image, setImage}: CanvasProps) => {
     const { color, setColor } = useColor()
     const { tool } = useTool()
 
     const stageRef = useRef<Konva.Stage | null>(null)
-    const {mainLayer, lineLayer, tempLayer, layers} = useCanvasLayers()
-    const {shapes, lines, images, texts} = useCanvasNodes()
+    const mainLayer = useRef<Konva.Layer | null>(null)
+    const lineLayer = useRef<Konva.Layer | null>(null)
+    const tempLayer = useRef<Konva.Layer | null>(null)
+    const transformerRef = useRef<Konva.Transformer | null>(null)
 
-    const resize_animationFrameID = useRef<number | null>(null)
-    const draw_line_animationFrameID = useRef<number | null>(null)
+    const DrawLineAnimationFrameID = useRef<number | null>(null)
+    const DrawShapeAnimationFrameID = useRef<number | null>(null)
 
     const tempShape = useRef<Konva.Shape | null>(null)
     const tempLine = useRef<Konva.Line | null>(null)
-    const tempSubLine = useRef<Konva.Line | null>(null)
 
-    const {transformerRef} = useTransformer()
-    const editingText = useRef<TextBox | null>(null)
+    const editingText = useRef<Konva.Text | null>(null)
 
     const nodeDataRef = useRef<NewNodeData | ModifiedNodeData | null>(null)
 
-    type FindNodeAndSetter = {
-	node: BaseNode | undefined
-	set_nodes: Dispatch<SetStateAction<BaseNode[]>> | undefined
-    }
+    React.useEffect(() => {
+	HistoryManager.transformerRef = transformerRef
 
-    const find_node_and_setter = (konva_node: Konva.Node): FindNodeAndSetter => {
-	let node
-	let set_nodes
+	shapeManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef})
+	lineManager.setup({layer: lineLayer, transformer: undefined, nodeDataRef})
+	imageManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef})
+	textManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef})
+    }, []) // Initialize all the manager class atributes
 
-	if (konva_node instanceof Konva.Image) {
-	    node = images.find(shape => shape.node?.id() == konva_node.id()) as BaseNode
-	    set_nodes = setImages as Dispatch<SetStateAction<BaseNode[]>>
-	}
-	else if (konva_node instanceof Konva.Text) {
-	    node = texts.find(shape => shape.node?.id() == konva_node.id())
-	    set_nodes = setTexts as Dispatch<SetStateAction<BaseNode[]>>
-	}
-	else if (konva_node instanceof Konva.Shape) {
-	    node = shapes.find(shape => shape.node?.id() == konva_node.id())
-	    set_nodes = setShapes as Dispatch<SetStateAction<BaseNode[]>>
-	}
-
-	return {node, set_nodes}
-    }
-
-    const handle_mousedown = (event: CanvasMouseEvent) => {
-	if (tool.name == 'pen' || tool.name == 'eraser' || tool.name == 'brush') {
-	    start_draw({event, tempLine, tempSubLine, tool_name: tool.name, color, lineLayer, tempLayer})
-	} else {
-	    draw_shape_preview({event, tool_name: tool.name, color, tempShape, tempLayer})
-	}
-    }
-
-    const handle_mousemove = (event: CanvasMouseEvent) => {
-	if (tempLine.current) {
-	    draw({event, tempLine, tempSubLine, tempLayer, animationFrameID: draw_line_animationFrameID})
-	}
-	else if (tempShape.current) {
-	    resize_shape_preview({event, tempShape, tempLayer, animationFrameID: resize_animationFrameID})
-	}
-    }
-
-    const handle_mouseup = () => {
-	if (tempLine.current) {
-	    stop_draw({tempLine, tempSubLine, tool_name: tool.name, lineLayer, tempLayer, lines})
-
-		//   if (new_line) {
-		//setLines(prev => [...prev, new_line])
-		//
-		//HistoryManager.create_new_node({
-		//    change: "add/remove",
-		//    operation: "add",
-		//    node: new_line,
-		//    setNodes: setLines as Dispatch<SetStateAction<BaseNode[]>>
-		//})
-		//   }
-	} else if (tempShape) {
-	    commit_shape_preview({tempShape, tempLayer, mainLayer, shapes})
-
-		//   if (new_shape) {
-		//setShapes((prev: Shape[]): Shape[] => [...prev, new_shape])
-		//tempShapeLayerRef.current?.destroyChildren()
-		//tempShapeLayerRef.current?.draw()
-		//tempShape.current = null
-		//resize_animationFrameID.current = null
-		//
-		//HistoryManager.create_new_node({
-		//    change: "add/remove",
-		//    operation: "add",
-		//    node: new_shape,
-		//    setNodes: setShapes as Dispatch<SetStateAction<BaseNode[]>>
-		//	})
-		//   }
-	}
-    }
-
-    const handle_click = (event: CanvasMouseEvent) => {
-	const nodes = transformerRef.current?.nodes()
-	if (nodes && nodes.length != 0 && !nodes.includes(event.currentTarget)) transformerRef.current?.nodes([])
-
-	if (editingText.current) {
-	    editingText.current.delete()
-	    if (editingText.current.node) {
-		transformerRef.current?.nodes([editingText.current.node])
-	    }
-	    editingText.current = null
-	}
-	//if (tool.name == 'text') {
-	//    const new_textbox = add_textbox(event)
-	//
-	//    if (new_textbox) {
-	//	setTexts((prev) => [...prev, new_textbox])
-	//
-	//	HistoryManager.create_new_node({
-	//	    change: "add/remove",
-	//	    operation: "add",
-	//	    node: new_textbox,
-	//	    setNodes: setTexts as Dispatch<SetStateAction<BaseNode[]>>
-	//	})
-	//    }
-	//    return
-	//}
-	if (tool.name == 'pick') {
-	    const new_color = pick_color({event, layers})
-	    if (new_color) setColor(new_color)
-	    return
-	}
-	//if (tool.name == 'fill') {
-	//    fill_shape({event, color: color, setter: setShapes})
-	//}
-    }
-
-    const handle_shape_click = (event: CanvasMouseEvent) => {
-	if (tool.name != 'select') return
-
-	event.cancelBubble = true
-	const target = event.currentTarget
-	transformerRef.current?.nodes([target])
-    }
-
-    const handle_drag_start = (event: CanvasMouseEvent) => {
-	    if (tool.name != 'select') {
-		event.target.stopDrag()
-	    }
-
-	    const current_node = event.target
-	    if (!current_node) return
-
-	    const {node, set_nodes} = find_node_and_setter(current_node)
-
-	    if (!node || !set_nodes) return
-
-	    nodeDataRef.current = {
-		change: "modify",
-		node: node,
-		position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
-		setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
-	    }
-    }
-
-    const handle_drag_end = (event: CanvasMouseEvent, id: string, setter: Dispatch<SetStateAction<BaseNode[]>>) => {
-	const ptr = nodeDataRef.current as ModifiedNodeData
-	if (ptr?.position) {
-	    const current_node = event.target
-	    if (!current_node) return
-
-	    ptr.position.new = {x: current_node.x(), y: current_node.y()}
-	    const new_node = ptr.node.clone(undefined, ptr.position.new)
-	    if (!new_node) {
-		nodeDataRef.current = null
-		return
-	    }
-
-	    setter(prev => prev.map(node => node.id == id ? new_node : node))
-
-	    HistoryManager.create_new_node(ptr)
-	    nodeDataRef.current = null
-	    current_node.stopDrag()
-	}
-    }
-
-    const handle_textbox_dbclick = (text: TextBox) => {
-	transformerRef.current?.nodes([])
-	handle_edit_textbox({textbox: text, editingText})
-    }
-
-    useEffect(() => {
-	if (!image) return
-
-	const img = new window.Image()
-	img.src = image.src
-
-	img.onload = () => {
-	    const width = 200
-	    const ratio = image.width / width
-	    const height = image.height / ratio
-
-	    const new_image = new Konva.Image({
-		image,
-		width: width,
-		height: height,
-		x: 300, y: 100
-	    })
-
-	    if (new_image) {
-		mainLayer.current?.add(new_image)
-		images.current.push(new_image)
-
-		//HistoryManager.create_new_node({
-		//    change: "add/remove",
-		//    operation: "add",
-		//    node: new_image,
-		//    setNodes: setImages as Dispatch<SetStateAction<BaseNode[]>>
-		//})
-	    }
-	}
-
-	setImage(null)
-    }, [image])
+    React.useEffect(() => {
+	shapeManager.update_tool(tool)
+	lineManager.update_tool(tool)
+	imageManager.update_tool(tool)
+	textManager.update_tool(tool)
+    }, [tool]) // syncs the managers classes with tool state
 
     return (
 	<Stage
 	    ref={stageRef}
 	    width={window.innerWidth}
 	    height={window.innerHeight}
-	    onMouseDown={handle_mousedown}
-	    onMouseUp={handle_mouseup}
-	    onMouseMove={handle_mousemove}
-	    onClick={handle_click}
+	    onMouseDown={event => handle_mousedown({event, tempLine, tempShape, color, lineLayer, tempLayer, tool_name: tool.name})}
+	    onMouseMove={event => handle_mousemove({event, tempLine, tempShape, tempLayer, DrawLineAnimationFrameID, DrawShapeAnimationFrameID})}
+	    onMouseUp={() => handle_mouseup({tempLine, tempShape, tool_name: tool.name, tempLayer, animationFrameID: DrawShapeAnimationFrameID})}
+	    onClick={(event) => handle_canvas_click({event, transformerRef, editingText, nodeDataRef, tool_name: tool.name, color, setColor})}
 	>
-	{/*<Layer ref={textsLayerRef}>
-		{texts.map((text) => {
-		    return (
-			<Text
-			    key={text.id}
-			    ref={text.assign_node}
-			    x={text.x}
-			    y={text.y}
-			    text={text.text}
-			    width={100}
-			    height={30}
-			    fontSize={text.fontSize}
-			    fontFamily='Nunito'
-			    padding={5}
-
-			    onDragStart={(e) => handle_drag_start(e)}
-			    onDragEnd={(e) => handle_drag_end(e, text.id, setTexts as Dispatch<SetStateAction<BaseNode[]>>)}
-			    onClick={(e) => handle_shape_click(e)}
-			    draggable
-			    onDblClick={() => handle_textbox_dbclick(text)}
-
-			    onTransformEnd={() => text.handle_resize()}
-			/>
-		    )
-		})}
-	    </Layer>
-
-	    <Layer ref={imagesLayerRef}>
-		{images.map((img) => {
-		    return (
-			<Image
-			    key={img.id}
-			    ref={img.assign_node}
-			    x={img.x}
-			    y={img.y}
-			    image={img.reference}
-			    width={img.width}
-			    height={img.height}
-			    onDragStart={(e) => handle_drag_start(e)}
-			    onDragEnd={(e) => handle_drag_end(e, img.id, setImages as Dispatch<SetStateAction<BaseNode[]>>)}
-			    onClick={(e) => handle_shape_click(e)}
-			    draggable
-			/>
-		    )
-		})}
-	    </Layer> */}
-
 	    <Layer ref={mainLayer}>
+		<Transformer
+		    ref={transformerRef}
+		    onTransformStart={(event) => handle_node_transform_start({event, nodeDataRef, transformerRef})}
+		    onTransform={(event) => handle_node_transform({event, nodeDataRef})}
+		    onTransformEnd={(event) => handle_node_transform_end({event, nodeDataRef})}
+		/>
 	    </Layer>
 
 	    <Layer ref={lineLayer}>
@@ -311,91 +77,6 @@ const Canvas = ({image, setImage}: CanvasProps) => {
 
 	    <Layer ref={tempLayer}>
 	    </Layer>
-
-	    {/*{
-		tool.name == 'select' &&
-		<Transformer
-		    ref={transformerRef}
-		    onTransformStart={(e) => {
-			const current_node = e.target
-			if (!current_node) return
-
-			const {node, set_nodes} = find_node_and_setter(current_node)
-
-			if (!node || !set_nodes) return
-
-			if (node instanceof CircleObj) {
-			    transformerRef.current?.centeredScaling(true)
-			    nodeDataRef.current = {
-				change: "modify",
-				node: node,
-				dimensions: {old: {radius: node.radius}, new: undefined},
-				position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
-				setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
-			    }
-			} 
-			else if (node instanceof LineObj) {
-			    nodeDataRef.current = {
-				change: "modify",
-				node: node,
-				position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
-				scale: {old: {x: current_node.scaleX(), y: current_node.scaleY()}, new: undefined},
-				setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
-			    }
-			}
-			else {
-			    nodeDataRef.current = {
-				change: "modify",
-				node: node,
-				dimensions: {old: {width: current_node.width(), height: current_node.height()}, new: undefined},
-				position: {old: {x: current_node.x(), y: current_node.y()}, new: undefined},
-				setNodes: set_nodes as Dispatch<SetStateAction<BaseNode[]>>
-			    }
-			}
-
-		    }}
-		    onTransform={(e) => {
-			const node = e.target
-			const scaleX = node.scaleX()
-			const scaleY = node.scaleY()
-
-			if (node instanceof Konva.Line) return
-
-			node.width(node.width() * scaleX)
-			node.height(node.height() * scaleY)
-
-			node.scaleX(1)
-			node.scaleY(1)
-		    }}
-		    onTransformEnd={(e) => {
-			const current_node = e.target
-			if (!current_node) return
-
-			const ptr = nodeDataRef.current as ModifiedNodeData
-
-			if (ptr) {
-			    if (current_node instanceof Konva.Circle) {
-				ptr.dimensions!.new = {radius: current_node.radius()}
-				transformerRef.current?.centeredScaling(false)
-			    }
-			    else if (current_node instanceof Konva.Line) {
-				ptr.scale!.new = {x: current_node.scaleX(), y: current_node.scaleY()}
-			    }
-			    else ptr.dimensions!.new = {width: current_node.width(), height: current_node.height()}
-
-			    ptr.position!.new = {x: current_node.x(), y: current_node.y()}
-			    ptr.setNodes(prev => prev.map(node => {
-				if (node.id == ptr.node.id) {
-				    const new_node = node.clone(undefined, ptr.position!.new, ptr.dimensions?.new, ptr.scale?.new)
-				    return new_node ? new_node : node
-				} else return node
-			    }))
-			    HistoryManager.create_new_node(ptr)
-			    nodeDataRef.current = null
-			}
-		    }}
-		/>
-	    } */}
 	</Stage>
     )
 }

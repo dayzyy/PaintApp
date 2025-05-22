@@ -1,6 +1,5 @@
 import React from "react";
 import { useResolution } from "../context/ResolutionContext";
-import { useCanvasLayers } from "../context/CanvasLayersContext.tsx";
 import { useRef, useState } from "react";
 
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
@@ -17,18 +16,19 @@ import { useTool } from "../context/ToolContext.tsx";
 import { useColor } from "../context/ColorContext.tsx";
 
 import { Tool } from "../types/tool.ts";
-import { useCanvasNodes } from "../context/CanvasNodesContext.tsx";
+import { shapeManager, lineManager, textManager, imageManager } from "../utils/nodes/NodeManager.ts";
 
 type PannelProps = {
     is_shown: boolean
     toggle_off: () => void
-    add_image: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
+const Pannel = ({is_shown, toggle_off }: PannelProps) => {
+    //const renderCounterRef = useRef<number>(0)
+    //console.log(`PANNEL render #${renderCounterRef.current}`)
+    //renderCounterRef.current += 1
+
     const { color, setColor } = useColor()
-    const { layers } = useCanvasLayers()
-    const { lines, shapes, images, texts } = useCanvasNodes()
 
     const {tool, setTool} = useTool()
     const sliced_tools = useRef<Tool[][]>([])
@@ -91,13 +91,10 @@ const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
     }
 
     const clear_canvas = () => {
-	for (let layer of layers) {
-	    layer.current?.destroyChildren()
-	}
-	lines.current = []
-	shapes.current = []
-	images.current = []
-	texts.current = []
+	shapeManager.clear()
+	lineManager.clear()
+	imageManager.clear()
+	textManager.clear()
     }
 
     const split_tools = () => {
@@ -185,7 +182,7 @@ const Pannel = ({is_shown, toggle_off, add_image }: PannelProps) => {
 		    <GhostBlock>
 			<div className="relative w-[3rem] h-[3rem]  bg-[var(--color-bg-mode)] rounded-xl  grid place-items-center">
 			    <RiImageAddFill className="text-[1.5rem] text-[var(--color-icon-mode)]"/>
-			    <input onChange={(e) => add_image(e)} type="file" className="absolute w-full h-full !opacity-0 cursor-pointer"/>
+			    <input onChange={(e) => imageManager.create_image(e)} type="file" className="absolute w-full h-full !opacity-0 cursor-pointer"/>
 			</div>
 		    </GhostBlock>
 		</div>
