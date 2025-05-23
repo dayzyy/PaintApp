@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import React from "react";
 
 import { Tool } from "../types/tool";
 
@@ -9,10 +9,10 @@ type ToolContextType = {
     setTool: (t: Tool) => void
 }
 
-const ToolContext = createContext<ToolContextType | null>(null)
+const ToolContext = React.createContext<ToolContextType | null>(null)
 
-const ToolProvider = ({children}: {children: ReactNode}) => {
-    const [tool, setTool] = useState<Tool>({name: 'pen', icon: <FaPenAlt/>})
+const ToolProvider = ({children}: {children: React.ReactNode}) => {
+    const [tool, setTool] = React.useState<Tool>({name: 'pen', icon: <FaPenAlt/>})
 
     const force_cursor_update = () => {
 	const event = new MouseEvent('mousemove', {
@@ -23,7 +23,7 @@ const ToolProvider = ({children}: {children: ReactNode}) => {
 	document.dispatchEvent(event)
     }
 
-    useEffect(() => {
+    React.useEffect(() => {
 	document.body.style.cursor = `url(cursors/${tool.name}.cur), auto`
 	force_cursor_update()
     }, [tool])
@@ -36,7 +36,7 @@ const ToolProvider = ({children}: {children: ReactNode}) => {
 }
 
 const useTool = () => {
-    const context = useContext(ToolContext)
+    const context = React.useContext(ToolContext)
 
     if (!context) {
 	throw new Error('useTool must be use within a ToolProvider')

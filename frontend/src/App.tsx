@@ -1,56 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 
-import { useTheme } from './components/Theme'
-import { useTool } from './context/ToolContext';
 import { useResolution } from './context/ResolutionContext.tsx';
-
-import { TOOLS } from './constants/tools.tsx'
 
 import Pannel from './components/Pannel'
 import Alert from './components/Alert'
 import Canvas from './components/Canvas.tsx';
+import ToolIndicator from './components/ToolIndicator.tsx';
 import ShortcutListener from './components/ShortcutListener.tsx';
 
 import { FaExclamationCircle } from "react-icons/fa";
 
 const App = () => {
-    //const renderCounterRef = useRef<number>(0)
-    //console.log(`APP render #${renderCounterRef.current}`)
-    //renderCounterRef.current += 1
-
-    const [theme, setTheme] = useTheme()
     const { mobileViewport } = useResolution()
-
-    const { tool } = useTool()
 
     const [showAlert, setShowAlert] = useState(false)
     const [showPannel, setShowPannel] = useState(true)
     const [alertDisabled, setAlertDisabled] = useState(localStorage.getItem('alert-disabled') || false)
     const buttonRef = useRef<HTMLButtonElement | null>(null)
 
-    const [image, setImage] = useState<HTMLImageElement | null>(null)
+    const MemoizedCanvas = React.useMemo(() => <Canvas/>, [])
+    const MemoizedPannel = React.useMemo(() => <Pannel is_shown={showPannel} toggle_off={() => setShowPannel(false)}/>, [showPannel])
 
     const disable_alert = () => {
 	localStorage.setItem('alert-disabled', 'true')
 	setAlertDisabled(true)
     }
 
-    const handle_image_change = (event: React.ChangeEvent<HTMLInputElement>) => {
-	const file = event.target.files?.[0]
-	if (!file) return
+    React.useEffect(() => {
+	document.documentElement.setAttribute('data-theme', 'light')
+    }, [])
 
-	const reader = new FileReader()
-	reader.onload = () => {
-	    const img = new Image()
-	    img.src = reader.result as string
-	    img.onload = () => {
-		setImage(img)
-	    }
-	}
-	reader.readAsDataURL(file)
-    }
-
-    useEffect(() => {
+    React.useEffect(() => {
 	if (!showPannel && !alertDisabled) {
 	    setShowAlert(true)
 	} else if (!alertDisabled) {
@@ -74,18 +54,11 @@ const App = () => {
 		/>
 	    }
 
-	    {mobileViewport && 
-		<div className='fixed top-3 left-3 [&_*]:!text-[2.3rem] opacity-30 z-[1121]'>
-		    {TOOLS.find(t => t.name == tool.name)?.icon}
-		</div>
-	    }
+	    {mobileViewport && <ToolIndicator/>}
 
-	    <Pannel
-		is_shown={showPannel}
-		toggle_off={() => setShowPannel(false)}
-	    />
+	    {MemoizedPannel}
 
-	    <Canvas/>
+	    {MemoizedCanvas}
 	</main>
     )
 }

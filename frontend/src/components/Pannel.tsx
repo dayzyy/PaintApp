@@ -24,11 +24,8 @@ type PannelProps = {
 }
 
 const Pannel = ({is_shown, toggle_off }: PannelProps) => {
-    //const renderCounterRef = useRef<number>(0)
-    //console.log(`PANNEL render #${renderCounterRef.current}`)
-    //renderCounterRef.current += 1
-
     const { color, setColor } = useColor()
+    console.log("RENDER")
 
     const {tool, setTool} = useTool()
     const sliced_tools = useRef<Tool[][]>([])

@@ -5,7 +5,7 @@ import Konva from 'konva'
 import { start_draw, draw, stop_draw } from './free-hand-drawing.ts'
 import { draw_shape_preview, resize_shape_preview, commit_shape_preview } from './shape-drawing.ts'
 import { handle_text_dbclick, handle_text_clickoff } from './textbox-events.ts'
-import { ToolName } from '../../types/tool.ts'
+import { Tool } from '../../types/tool.ts'
 import { HistoryManager, NewNodeData, ModifiedNodeData } from "../history/history-manager.ts"
 import { shapeManager, imageManager, lineManager, textManager } from "../nodes/NodeManager.ts"
 
@@ -16,17 +16,17 @@ type CanvasMouseEvent = {
 type HandleMouseDownProps = CanvasMouseEvent & {
     tempLine: RefObject<Konva.Line | null>
     tempShape: RefObject<Konva.Shape | null>
-    color: string
+    colorRef: React.RefObject<string>
     lineLayer: RefObject<Konva.Layer | null>
     tempLayer: RefObject<Konva.Layer | null>
-    tool_name: ToolName
+    toolRef: RefObject<Tool>
 }
 
-const handle_mousedown = ({event, tempLine, tempShape, color, lineLayer, tempLayer, tool_name}: HandleMouseDownProps) => {
-    if (tool_name == 'pen' || tool_name == 'eraser' || tool_name == 'brush') {
-	start_draw({event, tempLine, tool_name, color, lineLayer, tempLayer})
+const handle_mousedown = ({event, tempLine, tempShape, colorRef, lineLayer, tempLayer, toolRef}: HandleMouseDownProps) => {
+    if (toolRef.current.name == 'pen' || toolRef.current.name == 'eraser' || toolRef.current.name == 'brush') {
+	start_draw({event, tempLine, toolRef, colorRef, lineLayer, tempLayer})
     } else {
-	draw_shape_preview({event, tool_name, color, tempShape, tempLayer})
+	draw_shape_preview({event, toolRef, colorRef, tempShape, tempLayer})
     }
 }
 
@@ -50,14 +50,14 @@ const handle_mousemove = ({event, tempLine, tempLayer, tempShape, DrawLineAnimat
 type HandleMouseUpProps = {
     tempLine: RefObject<Konva.Line | null>
     tempShape: RefObject<Konva.Shape | null>
-    tool_name: ToolName
+    toolRef: RefObject<Tool>
     tempLayer: RefObject<Konva.Layer | null>
     animationFrameID: RefObject<number | null>
 }
 
-const handle_mouseup = ({tempLine, tempShape, tool_name, tempLayer, animationFrameID}: HandleMouseUpProps) => {
+const handle_mouseup = ({tempLine, tempShape, toolRef, tempLayer, animationFrameID}: HandleMouseUpProps) => {
     if (tempLine.current) {
-	stop_draw({tempLine, tool_name, tempLayer, animationFrameID})
+	stop_draw({tempLine, toolRef, tempLayer, animationFrameID})
     } else if (tempShape) {
 	commit_shape_preview({tempShape, tempLayer, animationFrameID})
     }
@@ -67,12 +67,12 @@ type HandleCanvasClickProps = CanvasMouseEvent & {
     transformerRef: RefObject<Konva.Transformer | null>
     editingText: RefObject<Konva.Text | null>
     nodeDataRef: React.RefObject<NewNodeData | ModifiedNodeData | null>
-    color: string
+    colorRef: React.RefObject<string>
     setColor: React.Dispatch<React.SetStateAction<string>>
-    tool_name: ToolName
+    toolRef: RefObject<Tool>
 }
 
-const handle_canvas_click = ({event, transformerRef, editingText, nodeDataRef, tool_name, color, setColor}: HandleCanvasClickProps) => {
+const handle_canvas_click = ({event, transformerRef, editingText, nodeDataRef, toolRef, colorRef, setColor}: HandleCanvasClickProps) => {
     const nodes = transformerRef.current?.nodes()
     if (nodes && nodes.length != 0 && !nodes.includes(event.currentTarget)) transformerRef.current?.nodes([]) // Unselect the selected node if elsewhere is clicked
 
@@ -82,7 +82,7 @@ const handle_canvas_click = ({event, transformerRef, editingText, nodeDataRef, t
 
     if (editingText.current) handle_text_clickoff({editingText, nodeDataRef})
 
-    if (tool_name == 'text') {
+    if (toolRef.current.name == 'text') {
 	const new_text = new Konva.Text({
 	    x: pos.x,  
 	    y: pos.y,
@@ -93,7 +93,7 @@ const handle_canvas_click = ({event, transformerRef, editingText, nodeDataRef, t
 	new_text.on('dblclick', () => handle_text_dbclick({textNode: new_text, editingText, nodeDataRef, transformerRef}))
 	textManager.add(new_text)
     }
-    else if (tool_name == 'pick') {
+    else if (toolRef.current.name == 'pick') {
 	const layers: (React.RefObject<Konva.Layer | null> | null)[] | null[] = [
 	    shapeManager.layer, lineManager.layer,
 	    imageManager.layer, textManager.layer
@@ -110,15 +110,15 @@ const handle_canvas_click = ({event, transformerRef, editingText, nodeDataRef, t
 	}
 	setColor('#fff')
     }
-    else if (tool_name == 'fill') {
+    else if (toolRef.current.name == 'fill') {
 	if (!(node instanceof Konva.Image) && node instanceof Konva.Circle || node instanceof Konva.Rect) {
 	    const old_color = node.fill()
-	    node.fill(color)
+	    node.fill(colorRef.current)
 
 	    HistoryManager.create_new_node({
 		change: "modify",
 		node: node,
-		fillColor: {old: old_color, new: color}
+		fillColor: {old: old_color, new: colorRef.current}
 	    })
 	}
     }

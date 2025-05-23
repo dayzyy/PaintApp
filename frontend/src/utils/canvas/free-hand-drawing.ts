@@ -1,24 +1,24 @@
 import Konva from "konva"
 import { RefObject } from "react"
 import { CanvasMouseEvent } from "./mouse-events.ts"
-import { ToolName } from "../../types/tool.ts"
+import { Tool } from "../../types/tool.ts"
 import { lineManager } from "../nodes/NodeManager.ts"
 
 type StartDrawProps = CanvasMouseEvent & {
     tempLine: RefObject<Konva.Line | null>
-    tool_name: ToolName
-    color: string | CanvasGradient
+    toolRef: RefObject<Tool>
+    colorRef: React.RefObject<string>
     lineLayer: RefObject<Konva.Layer | null>
     tempLayer: RefObject<Konva.Layer | null>
 }
 
-const start_draw = ({event, tempLine, tool_name, color, lineLayer, tempLayer}: StartDrawProps) => {
+const start_draw = ({event, tempLine, toolRef, colorRef, lineLayer, tempLayer}: StartDrawProps) => {
     const pos = event.target.getStage()?.getPointerPosition()
     if (!pos) return
 
-    if (tool_name == 'brush') {
+    if (toolRef.current.name == 'brush') {
 	tempLine.current = new Konva.Line({
-	    points: [pos.x, pos.y], stroke: color, strokeWidth: 10,
+	    points: [pos.x, pos.y], stroke: colorRef.current, strokeWidth: 10,
 	    tension: 0.5, lineCap: 'round', lineJoin: 'round',
 	    globalCompositeOperation: 'source-over'
 	})
@@ -27,11 +27,11 @@ const start_draw = ({event, tempLine, tool_name, color, lineLayer, tempLayer}: S
 	tempLayer.current?.batchDraw()
     } else {
 	tempLine.current = new Konva.Line({
-	    points: [pos.x, pos.y], stroke: color, strokeWidth: tool_name == 'eraser' ? 10 : 2,
+	    points: [pos.x, pos.y], stroke: colorRef.current, strokeWidth: toolRef.current.name == 'eraser' ? 10 : 2,
 	    tension: 0.5, lineCap: 'round', lineJoin: 'round',
-	    globalCompositeOperation: tool_name == 'eraser' ? 'destination-out' : 'source-over'
+	    globalCompositeOperation: toolRef.current.name == 'eraser' ? 'destination-out' : 'source-over'
 	})
-	const target_layer = tool_name == 'eraser' ? lineLayer : tempLayer
+	const target_layer = toolRef.current.name == 'eraser' ? lineLayer : tempLayer
 	target_layer.current?.add(tempLine.current)
 	target_layer.current?.batchDraw()
     }
@@ -62,12 +62,12 @@ const draw = ({event, tempLine, tempLayer, animationFrameID}: DrawProps) => {
 
 type StopDrawProps = {
     tempLine: RefObject<Konva.Line | null>
-    tool_name: ToolName
+    toolRef: RefObject<Tool>
     tempLayer: RefObject<Konva.Layer | null>
     animationFrameID: RefObject<number | null>
 }
 
-const stop_draw = ({tempLine, tool_name, tempLayer, animationFrameID}: StopDrawProps) => {
+const stop_draw = ({tempLine, toolRef, tempLayer, animationFrameID}: StopDrawProps) => {
     if (animationFrameID.current) {
 	cancelAnimationFrame(animationFrameID.current)
 	animationFrameID.current = null
@@ -76,7 +76,7 @@ const stop_draw = ({tempLine, tool_name, tempLayer, animationFrameID}: StopDrawP
     const line = tempLine.current
     if (!line) return
 
-    if (tool_name == 'eraser') {
+    if (toolRef.current.name == 'eraser') {
 	line.remove()
     }
     tempLayer.current?.removeChildren()

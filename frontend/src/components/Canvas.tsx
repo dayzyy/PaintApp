@@ -2,24 +2,21 @@ import React, { useRef } from 'react';
 import Konva from 'konva';
 import { Stage, Layer, Transformer } from 'react-konva';
 
-
 import { handle_mousedown, handle_mousemove, handle_mouseup, handle_canvas_click } from '../utils/canvas/mouse-events.ts';
 import { handle_node_transform_start, handle_node_transform, handle_node_transform_end } from '../utils/canvas/node-interactions.ts';
 
-import { useColor } from '../context/ColorContext';
-import { useTool } from '../context/ToolContext';
+import { useColorRef } from '../context/ColorRefContext.tsx';
+import { useColorSetter } from '../context/ColorSetterContext.tsx';
+import { useToolRef } from '../context/ToolRefContext.tsx';
 
 import { NewNodeData, ModifiedNodeData } from '../utils/history/history-manager.ts';
 import { HistoryManager } from '../utils/history/history-manager.ts';
 import { shapeManager, imageManager, textManager, lineManager } from '../utils/nodes/NodeManager.ts';
 
 const Canvas = () => {
-    //const renderCounterRef = useRef<number>(0)
-    //console.log(`CANVAS render #${renderCounterRef.current}`)
-    //renderCounterRef.current += 1
-
-    const { color, setColor } = useColor()
-    const { tool } = useTool()
+    const {colorRef} = useColorRef()
+    const {setColor} = useColorSetter()
+    const {toolRef} = useToolRef()
 
     const stageRef = useRef<Konva.Stage | null>(null)
     const mainLayer = useRef<Konva.Layer | null>(null)
@@ -40,28 +37,21 @@ const Canvas = () => {
     React.useEffect(() => {
 	HistoryManager.transformerRef = transformerRef
 
-	shapeManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef})
-	lineManager.setup({layer: lineLayer, transformer: undefined, nodeDataRef})
-	imageManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef})
-	textManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef})
+	shapeManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef, toolRef})
+	lineManager.setup({layer: lineLayer, transformer: undefined, nodeDataRef, toolRef})
+	imageManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef, toolRef})
+	textManager.setup({layer: mainLayer, transformer: transformerRef, nodeDataRef, toolRef})
     }, []) // Initialize all the manager class atributes
-
-    React.useEffect(() => {
-	shapeManager.update_tool(tool)
-	lineManager.update_tool(tool)
-	imageManager.update_tool(tool)
-	textManager.update_tool(tool)
-    }, [tool]) // syncs the managers classes with tool state
 
     return (
 	<Stage
 	    ref={stageRef}
 	    width={window.innerWidth}
 	    height={window.innerHeight}
-	    onMouseDown={event => handle_mousedown({event, tempLine, tempShape, color, lineLayer, tempLayer, tool_name: tool.name})}
+	    onMouseDown={event => handle_mousedown({event, tempLine, tempShape, colorRef, lineLayer, tempLayer, toolRef})}
 	    onMouseMove={event => handle_mousemove({event, tempLine, tempShape, tempLayer, DrawLineAnimationFrameID, DrawShapeAnimationFrameID})}
-	    onMouseUp={() => handle_mouseup({tempLine, tempShape, tool_name: tool.name, tempLayer, animationFrameID: DrawShapeAnimationFrameID})}
-	    onClick={(event) => handle_canvas_click({event, transformerRef, editingText, nodeDataRef, tool_name: tool.name, color, setColor})}
+	    onMouseUp={() => handle_mouseup({tempLine, tempShape, toolRef, tempLayer, animationFrameID: DrawShapeAnimationFrameID})}
+	    onClick={(event) => handle_canvas_click({event, transformerRef, editingText, nodeDataRef, toolRef, colorRef, setColor})}
 	>
 	    <Layer ref={mainLayer}>
 		<Transformer

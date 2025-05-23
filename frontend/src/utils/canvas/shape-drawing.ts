@@ -1,39 +1,39 @@
 import Konva from "konva"
 import { RefObject } from "react"
 import { CanvasMouseEvent } from "./mouse-events.ts"
-import { ToolName } from "../../types/tool.ts"
+import { Tool } from "../../types/tool.ts"
 import { shapeManager } from "../nodes/NodeManager.ts"
 
 type DrawShapePreviewProps = CanvasMouseEvent & {
-    tool_name: ToolName
-    color: string | CanvasGradient
+    toolRef: RefObject<Tool>
+    colorRef: React.RefObject<string>
     tempShape: RefObject<Konva.Shape | null>
     tempLayer: RefObject<Konva.Layer | null>
 }
 
-const draw_shape_preview = ({event, tool_name, color, tempShape, tempLayer}: DrawShapePreviewProps) => {
+const draw_shape_preview = ({event, toolRef, colorRef, tempShape, tempLayer}: DrawShapePreviewProps) => {
     tempShape.current = null
-    if (tool_name == 'circle') {
+    if (toolRef.current.name == 'circle') {
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (!pos) return
 
-	tempShape.current = new Konva.Circle({x: pos.x, y:pos.y, stroke: color, radius: 0})
+	tempShape.current = new Konva.Circle({x: pos.x, y:pos.y, stroke: colorRef.current, radius: 0})
 	tempLayer.current?.add(tempShape.current)
 	tempLayer.current?.batchDraw()
     }
-    else if (tool_name == 'rectangle') {
+    else if (toolRef.current.name == 'rectangle') {
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (!pos) return
 
-	tempShape.current = new Konva.Rect({x: pos.x, y:pos.y, stroke: color, width: 1, height: 0})
+	tempShape.current = new Konva.Rect({x: pos.x, y:pos.y, stroke: colorRef.current, width: 1, height: 0})
 	tempLayer.current?.add(tempShape.current)
 	tempLayer.current?.batchDraw()
     }
-    else if (tool_name == 'line') {
+    else if (toolRef.current.name == 'line') {
 	const pos = event.target.getStage()?.getPointerPosition()
 	if (!pos) return
 
-	tempShape.current = new Konva.Line({points: [pos.x, pos.y], stroke: color, length: 0, tension: 0.5, lineCap: 'round', lineJoin: 'round'})
+	tempShape.current = new Konva.Line({points: [pos.x, pos.y], stroke: colorRef.current, length: 0, tension: 0.5, lineCap: 'round', lineJoin: 'round'})
 	tempLayer.current?.add(tempShape.current)
 	tempLayer.current?.batchDraw()
     }

@@ -9,6 +9,7 @@ type NodeManagerSetupProps = {
     layer: React.RefObject<Konva.Layer | null>
     transformer?: React.RefObject<Konva.Transformer | null>
     nodeDataRef: React.RefObject<NewNodeData | ModifiedNodeData | null>
+    toolRef: React.RefObject<Tool | null> | null
 }
 
 abstract class NodeManager {
@@ -16,27 +17,26 @@ abstract class NodeManager {
     layer: React.RefObject<Konva.Layer | null> | null = null
     transformer?: React.RefObject<Konva.Transformer | null> | null
     nodeDataRef: React.RefObject<NewNodeData | ModifiedNodeData | null> | null = null
-    tool: Tool | null = null
+    toolRef: React.RefObject<Tool | null> | null = null
 
-    setup({layer, transformer, nodeDataRef}: NodeManagerSetupProps) {
+    setup({layer, transformer, nodeDataRef, toolRef}: NodeManagerSetupProps) {
 	this.layer = layer ?? null
 	this.transformer = transformer ?? null
 	this.nodeDataRef = nodeDataRef ?? null
+	this.toolRef = toolRef ?? null
     }
-
-    update_tool(tool: Tool | null) {this.tool = tool ?? this.tool}
 
     abstract node_is_valid(node: Konva.Node): boolean
     abstract allowed_to_modify(): boolean
 
     add(node: Konva.Node) {
-	if (!this.layer || !this.tool || !this.nodeDataRef) return
+	if (!this.layer || !this.toolRef?.current || !this.nodeDataRef) return
 	if (!this.node_is_valid(node)) return
 
 	if (this.allowed_to_modify() && this.transformer) {
 	    node.draggable(true)
-	    node.on('click', (event) => handle_node_click({event, tool: this.tool as any, transformerRef: this.transformer as any}))
-	    node.on('dragstart', (event) => handle_drag_start({event, tool: this.tool as any, nodeDataRef: this.nodeDataRef as any}))
+	    node.on('click', (event) => handle_node_click({event, toolRef: this.toolRef as any, transformerRef: this.transformer as any}))
+	    node.on('dragstart', (event) => handle_drag_start({event, toolRef: this.toolRef as any, nodeDataRef: this.nodeDataRef as any}))
 	    node.on('dragend', (event) => handle_drag_end({event, nodeDataRef: this.nodeDataRef as any}))
 	}
 	this.nodes.push(node)

@@ -5,12 +5,12 @@ import { Tool } from '../../types/tool.ts'
 import { HistoryManager, NewNodeData, ModifiedNodeData } from '../history/history-manager.ts'
 
 type HandleDragStartProps = CanvasMouseEvent & {
-    tool: Tool
+    toolRef: React.RefObject<Tool | null>
     nodeDataRef: React.RefObject<NewNodeData | ModifiedNodeData | null>
 }
 
-const handle_drag_start = ({event, tool, nodeDataRef}: HandleDragStartProps) => {
-    if (tool.name != 'select') event.target.stopDrag()
+const handle_drag_start = ({event, toolRef, nodeDataRef}: HandleDragStartProps) => {
+    if (toolRef.current?.name != 'select') event.target.stopDrag()
 
     const node = event.target
     if (!node) return
@@ -39,12 +39,12 @@ const handle_drag_end = ({event, nodeDataRef}: HandleDragEndProps) => {
 }
 
 type HandleNodeClickProps = CanvasMouseEvent & {
-    tool: Tool
+    toolRef: React.RefObject<Tool | null>
     transformerRef: React.RefObject<Konva.Transformer | null>
 }
 
-const handle_node_click = ({event, tool, transformerRef}: HandleNodeClickProps) => {
-    if (tool.name != 'select') return
+const handle_node_click = ({event, toolRef, transformerRef}: HandleNodeClickProps) => {
+    if (toolRef.current?.name != 'select') return
 
     event.cancelBubble = true
     const target = event.currentTarget
