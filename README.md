@@ -57,9 +57,9 @@ npm run dev
 
 ### Desktop
 
-![Defautl Canvas](screenshots/desktop/canvas.png)
-![Freehand drawing](screenshots/desktop/freehand.png)
+![Default Canvas](screenshots/desktop/canvas.png)
 ![Pannel](screenshots/desktop/pannel.png)
+![Freehand drawing](screenshots/desktop/freehand.png)
 ![Shapes/Textboxes](screenshots/desktop/shapes.png)
 ![Images](screenshots/desktop/images.png)
 
